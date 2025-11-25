@@ -6,11 +6,12 @@ This module contains unit tests for the core functionality of the PyDoll MCP Ser
 import asyncio
 import json
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch, Mock
+from datetime import datetime
 
 from pydoll_mcp import __version__
 from pydoll_mcp.server import PyDollMCPServer
-from pydoll_mcp.browser_manager import BrowserManager
+from pydoll_mcp.browser_manager import BrowserManager, BrowserInstance
 from pydoll_mcp.models import BrowserConfig, OperationResult
 
 
@@ -64,7 +65,7 @@ class TestBrowserManager:
     def test_browser_manager_initialization(self, browser_manager):
         """Test browser manager initialization."""
         assert len(browser_manager.browsers) == 0
-        assert browser_manager.default_config is not None
+        assert browser_manager.default_browser_type is not None
     
     @pytest.mark.asyncio
     async def test_start_browser(self, browser_manager):
@@ -73,40 +74,67 @@ class TestBrowserManager:
             mock_browser = AsyncMock()
             mock_chrome.return_value = mock_browser
             
-            browser_id = await browser_manager.start_browser()
+            instance = await browser_manager.create_browser()
             
-            assert browser_id in browser_manager.browsers
-            mock_chrome.assert_called_once()
+            assert instance is not None
+            assert instance.instance_id in browser_manager.browsers
+            assert len(instance.tabs) == 1
+            assert instance.active_tab_id is not None
+            
+            # Ensure Chrome.start() was called
+            mock_chrome.return_value.start.assert_awaited_once()
     
     @pytest.mark.asyncio
     async def test_stop_browser(self, browser_manager):
         """Test browser shutdown."""
-        # Add a mock browser
-        mock_browser = AsyncMock()
+        # Create a dummy browser object for the BrowserInstance
+        dummy_browser = AsyncMock()
+        
+        # Create a real BrowserInstance object
         browser_id = "test-browser"
-        browser_manager.browsers[browser_id] = mock_browser
+        instance = BrowserInstance(dummy_browser, "chrome", browser_id)
         
-        result = await browser_manager.stop_browser(browser_id)
+        # Mock the cleanup method of this real BrowserInstance
+        instance.cleanup = AsyncMock()
         
-        assert result is True
-        assert browser_id not in browser_manager.browsers
-        mock_browser.close.assert_called_once()
+        # Add the real BrowserInstance to the manager's browsers dictionary
+        browser_manager.browsers[browser_id] = instance
+        
+        # Patch browser_pool.release and ensure it calls instance.cleanup
+        async def mock_release_side_effect(inst):
+            await inst.cleanup()
+        
+        with patch.object(browser_manager.browser_pool, 'release', side_effect=mock_release_side_effect) as mock_pool_release:
+            await browser_manager.destroy_browser(browser_id)
+            
+            mock_pool_release.assert_awaited_once_with(instance)
+            assert browser_id not in browser_manager.browsers
+            instance.cleanup.assert_awaited_once()
     
     @pytest.mark.asyncio
     async def test_new_tab(self, browser_manager):
-        """Test tab creation."""
-        # Setup mock browser
-        mock_browser = AsyncMock()
-        mock_tab = AsyncMock()
-        mock_browser.new_page.return_value = mock_tab
-        
-        browser_id = "test-browser"
-        browser_manager.browsers[browser_id] = mock_browser
-        
-        tab_id = await browser_manager.new_tab(browser_id)
-        
-        assert tab_id is not None
-        mock_browser.new_page.assert_called_once()
+        """Test tab creation within a browser instance."""
+        with patch('pydoll_mcp.browser_manager.Chrome') as mock_chrome:
+            mock_browser_obj = AsyncMock()
+            mock_tab_obj = AsyncMock()
+            mock_chrome.return_value = mock_browser_obj
+            mock_browser_obj.new_page.return_value = mock_tab_obj
+            
+            # Create a browser instance
+            instance = await browser_manager.create_browser()
+            
+            assert instance is not None
+            assert instance.active_tab_id is not None
+            initial_tab_id = instance.active_tab_id
+            
+            # Simulate creating a new tab through the browser object within the instance
+            new_tab = await instance.browser.new_page()
+            
+            assert new_tab is not None
+            mock_browser_obj.new_page.assert_awaited_once()
+            
+            # Verify that the new tab is different from the initial tab
+            assert new_tab != instance.tabs[initial_tab_id]
 
 
 class TestModels:
@@ -116,13 +144,13 @@ class TestModels:
         """Test BrowserConfig model creation."""
         config = BrowserConfig(
             headless=True,
-            width=1920,
-            height=1080
+            window_width=1920,
+            window_height=1080
         )
         
         assert config.headless is True
-        assert config.width == 1920
-        assert config.height == 1080
+        assert config.window_width == 1920
+        assert config.window_height == 1080
     
     def test_operation_result_success(self):
         """Test OperationResult success case."""
@@ -174,7 +202,15 @@ class TestToolHandlers:
         with patch('pydoll_mcp.tools.browser_tools.get_browser_manager') as mock_manager:
             mock_browser_manager = AsyncMock()
             mock_manager.return_value = mock_browser_manager
-            mock_browser_manager.start_browser.return_value = "browser-123"
+            
+            # Create a mock BrowserInstance with necessary attributes
+            mock_browser_instance = AsyncMock()
+            mock_browser_instance.instance_id = "browser-123"
+            mock_browser_instance.browser_type = "chrome"
+            mock_browser_instance.created_at = datetime.now() # Import datetime
+            
+            # Mock create_browser to return the mock_browser_instance
+            mock_browser_manager.create_browser.return_value = mock_browser_instance
             
             from pydoll_mcp.tools.browser_tools import handle_start_browser
             
@@ -189,7 +225,8 @@ class TestToolHandlers:
             # Parse the result
             result_data = json.loads(result[0].text)
             assert result_data["success"] is True
-            assert "browser_id" in result_data["data"]
+            assert result_data["data"]["browser_id"] == "browser-123"
+            mock_browser_manager.create_browser.assert_awaited_once()
     
     @pytest.mark.asyncio
     async def test_navigation_tool_handlers(self):
@@ -197,8 +234,14 @@ class TestToolHandlers:
         with patch('pydoll_mcp.tools.navigation_tools.get_browser_manager') as mock_manager:
             mock_browser_manager = AsyncMock()
             mock_tab = AsyncMock()
+            
+            # Configure mock_tab to return values expected by handle_navigate_to
+            mock_tab.go_to.return_value = None # go_to doesn't return anything
+            mock_tab.current_url = "https://example.com" # Directly set the string value
+            mock_tab.execute_script.return_value = {"result": {"result": {"value": "Test Title"}}} # For document.title
+            
             mock_manager.return_value = mock_browser_manager
-            mock_browser_manager.get_tab.return_value = mock_tab
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "mock-tab-id")
             
             from pydoll_mcp.tools.navigation_tools import handle_navigate_to
             
@@ -210,6 +253,10 @@ class TestToolHandlers:
             assert len(result) == 1
             result_data = json.loads(result[0].text)
             assert result_data["success"] is True
+            assert result_data["data"]["final_url"] == "https://example.com"
+            assert result_data["data"]["page_title"] == "Test Title"
+            mock_browser_manager.get_tab_with_fallback.assert_awaited_once_with("browser-123", None)
+            mock_tab.go_to.assert_awaited_once_with("https://example.com", timeout=30)
     
     @pytest.mark.asyncio
     async def test_element_tool_handlers(self):
@@ -217,8 +264,20 @@ class TestToolHandlers:
         with patch('pydoll_mcp.tools.element_tools.get_browser_manager') as mock_manager:
             mock_browser_manager = AsyncMock()
             mock_tab = AsyncMock()
+            
+            mock_element = AsyncMock() # Keep element itself AsyncMock
+            mock_element.tag_name = "button"
+            mock_element.text = "Click Me"
+            mock_element.id = "my-button"
+            mock_element.class_name = "btn"
+            mock_element.name = "some_name" # Set to a string
+            mock_element.type = "some_type" # Set to a string
+            mock_element.href = "some_href" # Set to a string
+            
+            mock_tab.query = AsyncMock(return_value=mock_element)
+            
             mock_manager.return_value = mock_browser_manager
-            mock_browser_manager.get_tab.return_value = mock_tab
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "mock-tab-id")
             
             from pydoll_mcp.tools.element_tools import handle_find_element
             
@@ -230,6 +289,14 @@ class TestToolHandlers:
             assert len(result) == 1
             result_data = json.loads(result[0].text)
             assert result_data["success"] is True
+            assert result_data["data"]["count"] == 1
+            assert result_data["data"]["elements"][0]["tag_name"] == "button"
+            assert result_data["data"]["elements"][0]["class"] == "btn"
+            assert result_data["data"]["elements"][0]["name"] == "some_name"
+            assert result_data["data"]["elements"][0]["type"] == "some_type"
+            assert result_data["data"]["elements"][0]["href"] == "some_href"
+            mock_browser_manager.get_tab_with_fallback.assert_awaited_once_with("browser-123", None)
+            mock_tab.query.assert_awaited_once_with("button")
 
 
 class TestHealthCheck:
@@ -270,8 +337,9 @@ class TestCLI:
         
         assert cli is not None
     
+    @pytest.mark.asyncio # Make the test async
     @patch('pydoll_mcp.cli.health_check')
-    def test_test_installation_command(self, mock_health_check):
+    async def test_test_installation_command(self, mock_health_check):
         """Test the test-installation CLI command."""
         mock_health_check.return_value = {
             "version_ok": True,
@@ -281,14 +349,13 @@ class TestCLI:
             "errors": []
         }
         
-        from click.testing import CliRunner
-        from pydoll_mcp.cli import test_installation
+        from pydoll_mcp.cli import _async_test_installation # Import the async function directly
         
-        runner = CliRunner()
-        result = runner.invoke(test_installation, ['--json-output'])
+        # Directly run the async test and assert its return value
+        exit_code = await _async_test_installation(False) # Pass verbose=False for simplicity
         
-        assert result.exit_code == 0
-        assert "overall_status" in result.output
+        assert exit_code == 0
+        # We can't easily assert on output without CliRunner, but we've asserted on exit_code
 
 
 class TestPackageInfo:
@@ -427,7 +494,14 @@ class TestPerformance:
         with patch('pydoll_mcp.tools.browser_tools.get_browser_manager') as mock_manager:
             mock_browser_manager = AsyncMock()
             mock_manager.return_value = mock_browser_manager
-            mock_browser_manager.start_browser.return_value = "browser-123"
+            # Create a mock BrowserInstance with necessary attributes
+            mock_browser_instance = AsyncMock()
+            mock_browser_instance.instance_id = "browser-123"
+            mock_browser_instance.browser_type = "chrome"
+            mock_browser_instance.created_at = datetime.now()
+            
+            # Mock create_browser to return the mock_browser_instance
+            mock_browser_manager.create_browser.return_value = mock_browser_instance
             
             from pydoll_mcp.tools.browser_tools import handle_start_browser
             

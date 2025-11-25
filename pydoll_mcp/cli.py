@@ -221,9 +221,10 @@ def test_installation(verbose: bool):
     
     def run_test():
         """Synchronous wrapper for the async test."""
-        return asyncio.run(_async_test_installation(verbose))
+        result_code = asyncio.run(_async_test_installation(verbose))
+        return result_code
     
-    run_test()
+    raise click.exceptions.Exit(run_test())
 
 
 async def _async_test_installation(verbose: bool):
@@ -245,7 +246,7 @@ async def _async_test_installation(verbose: bool):
         except Exception as e:
             progress.update(task1, completed=1)
             console.print(f"❌ Package installation: FAILED - {e}")
-            return
+            return 1
         
         # Test 2: Dependencies
         task2 = progress.add_task("Checking dependencies...", total=1)
@@ -255,7 +256,7 @@ async def _async_test_installation(verbose: bool):
         missing_deps = [name for name, info in sys_reqs["dependencies"].items() if not info["installed"]]
         if missing_deps:
             console.print(f"❌ Dependencies: MISSING - {', '.join(missing_deps)}")
-            return
+            return 1
         else:
             console.print("✅ Dependencies: OK")
         
@@ -278,7 +279,7 @@ async def _async_test_installation(verbose: bool):
             console.print("✅ Server startup: OK")
         else:
             console.print(f"❌ Server startup: FAILED - {server_error}")
-            return
+            return 1
         
         # Test 5: Tool enumeration
         task5 = progress.add_task("Counting available tools...", total=1)
@@ -289,12 +290,13 @@ async def _async_test_installation(verbose: bool):
         except Exception as e:
             progress.update(task5, completed=1)
             console.print(f"❌ Tool enumeration: FAILED - {e}")
-            return
+            return 1
     
     # Success summary
     console.print("\n[bold green]✨ Installation Test Complete![/bold green]")
     console.print(f"[green]✨ Total Tools Available: {tool_count}[/green]")
     console.print("[green]🚀 PyDoll MCP Server is ready to use![/green]")
+    return 0
 
 
 @cli.command()
