@@ -605,5 +605,5 @@ ELEMENT_TOOL_HANDLERS = {
     "find_element": handle_find_element,
     "click_element": handle_click_element,
     "type_text": handle_type_text,
-    "get__parent_element": handle_get_parent_element,
+    "get_parent_element": handle_get_parent_element,
 }
