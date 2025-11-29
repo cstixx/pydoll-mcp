@@ -7,6 +7,7 @@ This module provides MCP tools for anti-detection and protection bypass includin
 - Fingerprint and user agent management
 """
 
+import asyncio
 import logging
 from typing import Any, Dict, Sequence
 import json
@@ -45,7 +46,7 @@ PROTECTION_TOOLS = [
     ),
     Tool(
         name="bypass_cloudflare",
-        description="Attempt to bypass Cloudflare Turnstile protection",
+        description="Attempt to bypass Cloudflare Turnstile protection using PyDoll's Cloudflare captcha APIs",
         inputSchema={
             "type": "object",
             "properties": {
@@ -55,12 +56,53 @@ PROTECTION_TOOLS = [
                 },
                 "tab_id": {
                     "type": "string",
-                    "description": "Optional tab ID"
+                    "description": "Optional tab ID, uses active tab if not specified"
                 },
                 "max_attempts": {
                     "type": "integer",
                     "default": 3,
                     "description": "Maximum bypass attempts"
+                },
+                "auto_solve": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Enable automatic Cloudflare captcha solving"
+                }
+            },
+            "required": ["browser_id"]
+        }
+    ),
+    Tool(
+        name="enable_cloudflare_auto_solve",
+        description="Enable automatic Cloudflare captcha solving for a browser/tab",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Optional tab ID, uses active tab if not specified"
+                }
+            },
+            "required": ["browser_id"]
+        }
+    ),
+    Tool(
+        name="disable_cloudflare_auto_solve",
+        description="Disable automatic Cloudflare captcha solving",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Optional tab ID, uses active tab if not specified"
                 }
             },
             "required": ["browser_id"]
@@ -297,21 +339,21 @@ async def handle_enable_stealth_mode(arguments: Dict[str, Any]) -> Sequence[Text
     """Handle stealth mode enablement."""
     browser_id = arguments["browser_id"]
     level = arguments.get("level", "advanced")
-    
+
     try:
         browser_manager = get_browser_manager()
-        
+
         # Check if PyDoll is available
         if hasattr(browser_manager, 'browsers') and browser_id in browser_manager.browsers:
             # Real implementation would enable stealth features
             logger.info(f"Enabling {level} stealth mode for browser {browser_id}")
-        
+
         result = OperationResult(
             success=True,
             data={"stealth_level": level, "enabled": True},
             message=f"Stealth mode ({level}) enabled successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"Failed to enable stealth mode: {e}")
         result = OperationResult(
@@ -319,28 +361,55 @@ async def handle_enable_stealth_mode(arguments: Dict[str, Any]) -> Sequence[Text
             error=str(e),
             message="Failed to enable stealth mode"
         )
-    
+
     return [TextContent(type="text", text=json.dumps(result.dict()))]
 
 async def handle_bypass_cloudflare(arguments: Dict[str, Any]) -> Sequence[TextContent]:
-    """Handle Cloudflare bypass attempts."""
+    """Handle Cloudflare bypass attempts using PyDoll's Cloudflare captcha APIs."""
     browser_id = arguments["browser_id"]
+    tab_id = arguments.get("tab_id")
     max_attempts = arguments.get("max_attempts", 3)
-    
+    auto_solve = arguments.get("auto_solve", True)
+
     try:
-        # Simulate bypass attempt
-        logger.info(f"Attempting Cloudflare bypass for browser {browser_id}")
-        
+        browser_manager = get_browser_manager()
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+
+        logger.info(f"Attempting Cloudflare bypass for browser {browser_id}, tab {actual_tab_id}")
+
+        # Enable auto-solve if requested
+        if auto_solve:
+            await tab.enable_auto_solve_cloudflare_captcha()
+
+        # Wait for and bypass Cloudflare captcha
+        bypassed = False
+        attempts = 0
+
+        for attempt in range(max_attempts):
+            attempts += 1
+            try:
+                async for _ in tab.expect_and_bypass_cloudflare_captcha(timeout=30):
+                    bypassed = True
+                    break
+            except Exception as e:
+                logger.debug(f"Cloudflare bypass attempt {attempt + 1} failed: {e}")
+                if attempt < max_attempts - 1:
+                    await asyncio.sleep(2)  # Wait before retry
+                else:
+                    raise
+
         result = OperationResult(
-            success=True,
+            success=bypassed,
             data={
-                "bypass_method": "turnstile_solver",
-                "attempts": 1,
-                "success": True
+                "browser_id": browser_id,
+                "tab_id": actual_tab_id,
+                "bypass_method": "auto_solve_cloudflare_captcha",
+                "attempts": attempts,
+                "success": bypassed
             },
-            message="Cloudflare Turnstile bypassed successfully"
+            message="Cloudflare Turnstile bypassed successfully" if bypassed else "Cloudflare bypass failed after max attempts"
         )
-        
+
     except Exception as e:
         logger.error(f"Cloudflare bypass failed: {e}")
         result = OperationResult(
@@ -348,17 +417,99 @@ async def handle_bypass_cloudflare(arguments: Dict[str, Any]) -> Sequence[TextCo
             error=str(e),
             message="Failed to bypass Cloudflare protection"
         )
-    
+
     return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+async def handle_enable_cloudflare_auto_solve(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle enable Cloudflare auto-solve request."""
+    import asyncio
+
+    try:
+        browser_id = arguments.get("browser_id")
+        tab_id = arguments.get("tab_id")
+
+        if not browser_id:
+            result = OperationResult(
+                success=False,
+                message="Browser ID is required",
+                error="Missing required parameters"
+            )
+            return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+        browser_manager = get_browser_manager()
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+
+        # Enable auto-solve
+        await tab.enable_auto_solve_cloudflare_captcha()
+
+        result = OperationResult(
+            success=True,
+            message="Cloudflare auto-solve enabled",
+            data={
+                "browser_id": browser_id,
+                "tab_id": actual_tab_id
+            }
+        )
+        logger.info(f"Cloudflare auto-solve enabled on tab {actual_tab_id}")
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+    except Exception as e:
+        logger.error(f"Error enabling Cloudflare auto-solve: {e}")
+        result = OperationResult(
+            success=False,
+            error=str(e),
+            message="Failed to enable Cloudflare auto-solve"
+        )
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+async def handle_disable_cloudflare_auto_solve(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle disable Cloudflare auto-solve request."""
+    try:
+        browser_id = arguments.get("browser_id")
+        tab_id = arguments.get("tab_id")
+
+        if not browser_id:
+            result = OperationResult(
+                success=False,
+                message="Browser ID is required",
+                error="Missing required parameters"
+            )
+            return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+        browser_manager = get_browser_manager()
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+
+        # Disable auto-solve
+        await tab.disable_auto_solve_cloudflare_captcha()
+
+        result = OperationResult(
+            success=True,
+            message="Cloudflare auto-solve disabled",
+            data={
+                "browser_id": browser_id,
+                "tab_id": actual_tab_id
+            }
+        )
+        logger.info(f"Cloudflare auto-solve disabled on tab {actual_tab_id}")
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+    except Exception as e:
+        logger.error(f"Error disabling Cloudflare auto-solve: {e}")
+        result = OperationResult(
+            success=False,
+            error=str(e),
+            message="Failed to disable Cloudflare auto-solve"
+        )
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
 
 async def handle_bypass_recaptcha(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle reCAPTCHA bypass attempts."""
     browser_id = arguments["browser_id"]
     action = arguments.get("action", "homepage")
-    
+
     try:
         logger.info(f"Attempting reCAPTCHA v3 bypass for browser {browser_id}")
-        
+
         result = OperationResult(
             success=True,
             data={
@@ -368,7 +519,7 @@ async def handle_bypass_recaptcha(arguments: Dict[str, Any]) -> Sequence[TextCon
             },
             message="reCAPTCHA v3 bypassed successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"reCAPTCHA bypass failed: {e}")
         result = OperationResult(
@@ -376,17 +527,17 @@ async def handle_bypass_recaptcha(arguments: Dict[str, Any]) -> Sequence[TextCon
             error=str(e),
             message="Failed to bypass reCAPTCHA"
         )
-    
+
     return [TextContent(type="text", text=json.dumps(result.dict()))]
 
 async def handle_simulate_human_behavior(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle human behavior simulation."""
     browser_id = arguments["browser_id"]
     actions = arguments.get("actions", ["mouse_movement", "scrolling"])
-    
+
     try:
         logger.info(f"Simulating human behavior: {actions}")
-        
+
         simulated_actions = []
         for action in actions:
             simulated_actions.append({
@@ -394,13 +545,13 @@ async def handle_simulate_human_behavior(arguments: Dict[str, Any]) -> Sequence[
                 "duration": random.uniform(0.5, 2.0),
                 "success": True
             })
-        
+
         result = OperationResult(
             success=True,
             data={"simulated_actions": simulated_actions},
             message=f"Successfully simulated {len(actions)} human behaviors"
         )
-        
+
     except Exception as e:
         logger.error(f"Human behavior simulation failed: {e}")
         result = OperationResult(
@@ -408,25 +559,25 @@ async def handle_simulate_human_behavior(arguments: Dict[str, Any]) -> Sequence[
             error=str(e),
             message="Failed to simulate human behavior"
         )
-    
+
     return [TextContent(type="text", text=json.dumps(result.dict()))]
 
 async def handle_randomize_fingerprint(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle fingerprint randomization."""
     browser_id = arguments["browser_id"]
     components = arguments.get("components", ["canvas", "webgl"])
-    
+
     try:
         randomized = {}
         for component in components:
             randomized[component] = f"randomized_{random.randint(1000, 9999)}"
-        
+
         result = OperationResult(
             success=True,
             data={"randomized_components": randomized},
             message=f"Successfully randomized {len(components)} fingerprint components"
         )
-        
+
     except Exception as e:
         logger.error(f"Fingerprint randomization failed: {e}")
         result = OperationResult(
@@ -434,14 +585,14 @@ async def handle_randomize_fingerprint(arguments: Dict[str, Any]) -> Sequence[Te
             error=str(e),
             message="Failed to randomize fingerprint"
         )
-    
+
     return [TextContent(type="text", text=json.dumps(result.dict()))]
 
 async def handle_set_user_agent(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle user agent setting."""
     browser_id = arguments["browser_id"]
     use_random = arguments.get("random", False)
-    
+
     try:
         if use_random:
             user_agents = [
@@ -452,13 +603,13 @@ async def handle_set_user_agent(arguments: Dict[str, Any]) -> Sequence[TextConte
             user_agent = random.choice(user_agents)
         else:
             user_agent = arguments.get("user_agent", "Mozilla/5.0")
-        
+
         result = OperationResult(
             success=True,
             data={"user_agent": user_agent},
             message="User agent set successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"Failed to set user agent: {e}")
         result = OperationResult(
@@ -466,14 +617,14 @@ async def handle_set_user_agent(arguments: Dict[str, Any]) -> Sequence[TextConte
             error=str(e),
             message="Failed to set user agent"
         )
-    
+
     return [TextContent(type="text", text=json.dumps(result.dict()))]
 
 async def handle_bot_detection(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle bot detection challenges."""
     browser_id = arguments["browser_id"]
     detection_type = arguments.get("detection_type", "captcha")
-    
+
     try:
         result = OperationResult(
             success=True,
@@ -484,7 +635,7 @@ async def handle_bot_detection(arguments: Dict[str, Any]) -> Sequence[TextConten
             },
             message=f"Successfully handled {detection_type} detection"
         )
-        
+
     except Exception as e:
         logger.error(f"Bot detection handling failed: {e}")
         result = OperationResult(
@@ -492,14 +643,14 @@ async def handle_bot_detection(arguments: Dict[str, Any]) -> Sequence[TextConten
             error=str(e),
             message="Failed to handle bot detection"
         )
-    
+
     return [TextContent(type="text", text=json.dumps(result.dict()))]
 
 async def handle_evade_detection(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle detection evasion."""
     browser_id = arguments["browser_id"]
     techniques = arguments.get("techniques", ["webdriver_hide"])
-    
+
     try:
         applied_techniques = []
         for technique in techniques:
@@ -508,13 +659,13 @@ async def handle_evade_detection(arguments: Dict[str, Any]) -> Sequence[TextCont
                 "applied": True,
                 "status": "active"
             })
-        
+
         result = OperationResult(
             success=True,
             data={"applied_techniques": applied_techniques},
             message=f"Applied {len(techniques)} evasion techniques"
         )
-        
+
     except Exception as e:
         logger.error(f"Detection evasion failed: {e}")
         result = OperationResult(
@@ -522,7 +673,7 @@ async def handle_evade_detection(arguments: Dict[str, Any]) -> Sequence[TextCont
             error=str(e),
             message="Failed to evade detection"
         )
-    
+
     return [TextContent(type="text", text=json.dumps(result.dict()))]
 
 async def handle_rotate_proxy(arguments: Dict[str, Any]) -> Sequence[TextContent]:
@@ -530,7 +681,7 @@ async def handle_rotate_proxy(arguments: Dict[str, Any]) -> Sequence[TextContent
     browser_id = arguments["browser_id"]
     proxy_type = arguments.get("proxy_type", "http")
     country = arguments.get("country")
-    
+
     try:
         new_proxy = {
             "type": proxy_type,
@@ -538,13 +689,13 @@ async def handle_rotate_proxy(arguments: Dict[str, Any]) -> Sequence[TextContent
             "port": random.randint(8000, 9000),
             "country": country or "US"
         }
-        
+
         result = OperationResult(
             success=True,
             data={"new_proxy": new_proxy},
             message="Proxy rotated successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"Proxy rotation failed: {e}")
         result = OperationResult(
@@ -552,13 +703,13 @@ async def handle_rotate_proxy(arguments: Dict[str, Any]) -> Sequence[TextContent
             error=str(e),
             message="Failed to rotate proxy"
         )
-    
+
     return [TextContent(type="text", text=json.dumps(result.dict()))]
 
 async def handle_check_protection_status(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle protection status check."""
     browser_id = arguments["browser_id"]
-    
+
     try:
         status = {
             "stealth_mode": "active",
@@ -568,13 +719,13 @@ async def handle_check_protection_status(arguments: Dict[str, Any]) -> Sequence[
             "detection_score": 0.1,  # Lower is better
             "protection_level": "high"
         }
-        
+
         result = OperationResult(
             success=True,
             data=status,
             message="Protection status retrieved successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"Failed to check protection status: {e}")
         result = OperationResult(
@@ -582,14 +733,14 @@ async def handle_check_protection_status(arguments: Dict[str, Any]) -> Sequence[
             error=str(e),
             message="Failed to check protection status"
         )
-    
+
     return [TextContent(type="text", text=json.dumps(result.dict()))]
 
 async def handle_spoof_headers(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle header spoofing."""
     browser_id = arguments["browser_id"]
     headers = arguments.get("headers", {})
-    
+
     try:
         default_headers = {
             "Accept-Language": "en-US,en;q=0.9",
@@ -597,15 +748,15 @@ async def handle_spoof_headers(arguments: Dict[str, Any]) -> Sequence[TextConten
             "DNT": "1",
             "Upgrade-Insecure-Requests": "1"
         }
-        
+
         spoofed_headers = {**default_headers, **headers}
-        
+
         result = OperationResult(
             success=True,
             data={"spoofed_headers": spoofed_headers},
             message=f"Successfully spoofed {len(spoofed_headers)} headers"
         )
-        
+
     except Exception as e:
         logger.error(f"Header spoofing failed: {e}")
         result = OperationResult(
@@ -613,7 +764,7 @@ async def handle_spoof_headers(arguments: Dict[str, Any]) -> Sequence[TextConten
             error=str(e),
             message="Failed to spoof headers"
         )
-    
+
     return [TextContent(type="text", text=json.dumps(result.dict()))]
 
 async def handle_randomize_timing(arguments: Dict[str, Any]) -> Sequence[TextContent]:
@@ -621,11 +772,11 @@ async def handle_randomize_timing(arguments: Dict[str, Any]) -> Sequence[TextCon
     browser_id = arguments["browser_id"]
     min_delay = arguments.get("min_delay", 0.5)
     max_delay = arguments.get("max_delay", 3.0)
-    
+
     try:
         delay = random.uniform(min_delay, max_delay)
         await asyncio.sleep(delay)
-        
+
         result = OperationResult(
             success=True,
             data={
@@ -635,7 +786,7 @@ async def handle_randomize_timing(arguments: Dict[str, Any]) -> Sequence[TextCon
             },
             message=f"Applied random delay of {delay:.2f} seconds"
         )
-        
+
     except Exception as e:
         logger.error(f"Timing randomization failed: {e}")
         result = OperationResult(
@@ -643,13 +794,15 @@ async def handle_randomize_timing(arguments: Dict[str, Any]) -> Sequence[TextCon
             error=str(e),
             message="Failed to randomize timing"
         )
-    
+
     return [TextContent(type="text", text=json.dumps(result.dict()))]
 
 # Tool Handlers Registry
 PROTECTION_TOOL_HANDLERS = {
     "enable_stealth_mode": handle_enable_stealth_mode,
     "bypass_cloudflare": handle_bypass_cloudflare,
+    "enable_cloudflare_auto_solve": handle_enable_cloudflare_auto_solve,
+    "disable_cloudflare_auto_solve": handle_disable_cloudflare_auto_solve,
     "bypass_recaptcha": handle_bypass_recaptcha,
     "simulate_human_behavior": handle_simulate_human_behavior,
     "randomize_fingerprint": handle_randomize_fingerprint,

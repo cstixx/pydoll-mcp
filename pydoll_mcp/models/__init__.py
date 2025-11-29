@@ -16,33 +16,33 @@ __version__ = "1.0.0"
 __all__ = [
     # Base models
     "BaseRequest",
-    "BaseResponse", 
+    "BaseResponse",
     "ErrorResponse",
-    
+
     # Browser models
     "BrowserConfig",
     "BrowserInstance",
     "BrowserStatus",
     "TabInfo",
-    
+
     # Element models
     "ElementSelector",
     "ElementInfo",
     "InteractionResult",
-    
+
     # Network models
     "NetworkRequest",
     "NetworkResponse",
     "NetworkFilter",
-    
+
     # Screenshot models
     "ScreenshotConfig",
     "ScreenshotResult",
-    
+
     # Configuration models
     "ServerConfig",
     "ToolConfig",
-    
+
     # Result models
     "OperationResult",
     "BatchResult",
@@ -53,10 +53,10 @@ __all__ = [
 
 class BaseRequest(BaseModel):
     """Base class for all request models."""
-    
+
     operation_id: Optional[str] = Field(None, description="Unique operation identifier")
     timeout: Optional[int] = Field(30, description="Operation timeout in seconds")
-    
+
     class Config:
         extra = "forbid"
         validate_assignment = True
@@ -64,24 +64,24 @@ class BaseRequest(BaseModel):
 
 class BaseResponse(BaseModel):
     """Base class for all response models."""
-    
+
     success: StrictBool = Field(description="Whether the operation succeeded")
     message: Optional[str] = Field(None, description="Human-readable message")
     operation_id: Optional[str] = Field(None, description="Operation identifier")
     timestamp: Optional[str] = Field(None, description="Response timestamp")
-    
+
     class Config:
         extra = "forbid"
 
 
 class ErrorResponse(BaseResponse):
     """Error response model."""
-    
+
     success: StrictBool = Field(False, description="Always False for errors")
     error_code: Optional[str] = Field(None, description="Error code")
     error_type: Optional[str] = Field(None, description="Error type")
     details: Optional[Dict[str, Any]] = Field(None, description="Additional error details")
-    
+
     @validator('success')
     def success_must_be_false(cls, v):
         if v is not False:
@@ -93,7 +93,7 @@ class ErrorResponse(BaseResponse):
 
 class BrowserConfig(BaseModel):
     """Browser configuration model."""
-    
+
     browser_type: str = Field("chrome", description="Browser type (chrome, edge)")
     headless: bool = Field(False, description="Run browser in headless mode")
     window_width: int = Field(1920, description="Browser window width")
@@ -106,14 +106,14 @@ class BrowserConfig(BaseModel):
     block_ads: bool = Field(True, description="Block advertisement requests")
     enable_captcha_bypass: bool = Field(True, description="Enable automatic captcha bypass")
     custom_args: List[str] = Field(default_factory=list, description="Additional browser arguments")
-    start_timeout: int = Field(30, description="Browser startup timeout in seconds (PyDoll 2.3.1+)")
-    
+    start_timeout: int = Field(30, description="Browser startup timeout in seconds (PyDoll 2.12.4+)")
+
     @validator('browser_type')
     def validate_browser_type(cls, v):
         if v.lower() not in ['chrome', 'edge']:
             raise ValueError('browser_type must be "chrome" or "edge"')
         return v.lower()
-    
+
     @validator('window_width', 'window_height')
     def validate_dimensions(cls, v):
         if v < 100 or v > 7680:  # Up to 8K width
@@ -123,7 +123,7 @@ class BrowserConfig(BaseModel):
 
 class BrowserInstance(BaseModel):
     """Browser instance information model."""
-    
+
     instance_id: str = Field(description="Unique browser instance identifier")
     browser_type: str = Field(description="Browser type")
     pid: Optional[int] = Field(None, description="Browser process ID")
@@ -132,12 +132,12 @@ class BrowserInstance(BaseModel):
     tabs_count: int = Field(0, description="Number of open tabs")
     memory_usage: Optional[float] = Field(None, description="Memory usage in MB")
     cpu_usage: Optional[float] = Field(None, description="CPU usage percentage")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
                 "instance_id": "browser_abc123",
-                "browser_type": "chrome", 
+                "browser_type": "chrome",
                 "pid": 12345,
                 "created_at": "2024-01-15T10:30:00Z",
                 "status": "active",
@@ -150,7 +150,7 @@ class BrowserInstance(BaseModel):
 
 class BrowserStatus(BaseModel):
     """Browser status model."""
-    
+
     is_running: bool = Field(description="Whether browser is running")
     is_responsive: bool = Field(description="Whether browser is responsive")
     version: Optional[str] = Field(None, description="Browser version")
@@ -161,7 +161,7 @@ class BrowserStatus(BaseModel):
 
 class TabInfo(BaseModel):
     """Tab information model."""
-    
+
     tab_id: str = Field(description="Unique tab identifier")
     title: Optional[str] = Field(None, description="Page title")
     url: Optional[str] = Field(None, description="Current URL")
@@ -174,32 +174,32 @@ class TabInfo(BaseModel):
 
 class ElementSelector(BaseModel):
     """Element selector model."""
-    
+
     # Natural attribute selectors
     id: Optional[str] = Field(None, description="Element ID")
-    class_name: Optional[str] = Field(None, description="CSS class name") 
+    class_name: Optional[str] = Field(None, description="CSS class name")
     tag_name: Optional[str] = Field(None, description="HTML tag name")
     text: Optional[str] = Field(None, description="Element text content")
     name: Optional[str] = Field(None, description="Element name attribute")
     type: Optional[str] = Field(None, description="Element type attribute")
-    
+
     # Data attributes
     data_testid: Optional[str] = Field(None, description="data-testid attribute")
     data_id: Optional[str] = Field(None, description="data-id attribute")
-    
+
     # Accessibility attributes
     aria_label: Optional[str] = Field(None, description="aria-label attribute")
     aria_role: Optional[str] = Field(None, description="aria-role attribute")
-    
+
     # Traditional selectors
     css_selector: Optional[str] = Field(None, description="CSS selector")
     xpath: Optional[str] = Field(None, description="XPath expression")
-    
+
     # Search options
     find_all: bool = Field(False, description="Find all matching elements")
     timeout: int = Field(10, description="Timeout for element finding")
     wait_for_visible: bool = Field(True, description="Wait for element to be visible")
-    
+
     @validator('timeout')
     def validate_timeout(cls, v):
         if v < 1 or v > 300:  # Max 5 minutes
@@ -209,7 +209,7 @@ class ElementSelector(BaseModel):
 
 class ElementInfo(BaseModel):
     """Element information model."""
-    
+
     element_id: str = Field(description="Internal element identifier")
     tag_name: str = Field(description="HTML tag name")
     text: Optional[str] = Field(None, description="Element text content")
@@ -221,7 +221,7 @@ class ElementInfo(BaseModel):
 
 class InteractionResult(BaseModel):
     """Element interaction result model."""
-    
+
     success: bool = Field(description="Whether interaction succeeded")
     action: str = Field(description="Action performed (click, type, etc.)")
     element_id: Optional[str] = Field(None, description="Target element ID")
@@ -233,7 +233,7 @@ class InteractionResult(BaseModel):
 
 class NetworkRequest(BaseModel):
     """Network request model."""
-    
+
     request_id: str = Field(description="Unique request identifier")
     url: str = Field(description="Request URL")
     method: str = Field(description="HTTP method")
@@ -245,7 +245,7 @@ class NetworkRequest(BaseModel):
 
 class NetworkResponse(BaseModel):
     """Network response model."""
-    
+
     request_id: str = Field(description="Corresponding request identifier")
     status_code: int = Field(description="HTTP status code")
     status_text: str = Field(description="HTTP status text")
@@ -257,7 +257,7 @@ class NetworkResponse(BaseModel):
 
 class NetworkFilter(BaseModel):
     """Network filtering configuration."""
-    
+
     include_patterns: List[str] = Field(default_factory=list, description="URL patterns to include")
     exclude_patterns: List[str] = Field(default_factory=list, description="URL patterns to exclude")
     resource_types: List[str] = Field(default_factory=list, description="Resource types to monitor")
@@ -269,20 +269,20 @@ class NetworkFilter(BaseModel):
 
 class ScreenshotConfig(BaseModel):
     """Screenshot configuration model."""
-    
+
     format: str = Field("png", description="Image format (png, jpeg)")
     quality: Optional[int] = Field(None, description="JPEG quality (1-100)")
     full_page: bool = Field(False, description="Capture full page")
     element_selector: Optional[ElementSelector] = Field(None, description="Element to capture")
     viewport_only: bool = Field(True, description="Capture viewport only")
     hide_scrollbars: bool = Field(True, description="Hide scrollbars in screenshot")
-    
+
     @validator('format')
     def validate_format(cls, v):
         if v.lower() not in ['png', 'jpeg', 'jpg']:
             raise ValueError('format must be "png", "jpeg", or "jpg"')
         return v.lower()
-    
+
     @validator('quality')
     def validate_quality(cls, v):
         if v is not None and (v < 1 or v > 100):
@@ -292,7 +292,7 @@ class ScreenshotConfig(BaseModel):
 
 class ScreenshotResult(BaseModel):
     """Screenshot result model."""
-    
+
     success: bool = Field(description="Whether screenshot was successful")
     file_path: Optional[str] = Field(None, description="Path to saved screenshot file")
     base64_data: Optional[str] = Field(None, description="Base64 encoded image data")
@@ -305,14 +305,14 @@ class ScreenshotResult(BaseModel):
 
 class ServerConfig(BaseModel):
     """Server configuration model."""
-    
+
     log_level: str = Field("INFO", description="Logging level")
     max_browsers: int = Field(3, description="Maximum concurrent browsers")
     max_tabs_per_browser: int = Field(10, description="Maximum tabs per browser")
     cleanup_interval: int = Field(300, description="Cleanup interval in seconds")
     idle_timeout: int = Field(1800, description="Browser idle timeout in seconds")
     enable_telemetry: bool = Field(False, description="Enable usage telemetry")
-    
+
     @validator('log_level')
     def validate_log_level(cls, v):
         if v.upper() not in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
@@ -322,7 +322,7 @@ class ServerConfig(BaseModel):
 
 class ToolConfig(BaseModel):
     """Tool configuration model."""
-    
+
     tool_name: str = Field(description="Tool name")
     enabled: bool = Field(True, description="Whether tool is enabled")
     timeout: int = Field(30, description="Default timeout for tool operations")
@@ -334,7 +334,7 @@ class ToolConfig(BaseModel):
 
 class OperationResult(BaseModel):
     """Generic operation result model."""
-    
+
     success: bool = Field(description="Whether operation succeeded")
     data: Optional[Dict[str, Any]] = Field(None, description="Operation result data")
     message: Optional[str] = Field(None, description="Result message")
@@ -345,13 +345,13 @@ class OperationResult(BaseModel):
 
 class BatchResult(BaseModel):
     """Batch operation result model."""
-    
+
     total_operations: int = Field(description="Total number of operations")
     successful_operations: int = Field(description="Number of successful operations")
     failed_operations: int = Field(description="Number of failed operations")
     results: List[OperationResult] = Field(description="Individual operation results")
     execution_time: Optional[float] = Field(None, description="Total execution time")
-    
+
     @validator('successful_operations', 'failed_operations')
     def validate_operation_counts(cls, v, values):
         if 'total_operations' in values:

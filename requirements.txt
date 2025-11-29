@@ -2,14 +2,14 @@
 # Core Requirements for Production Use
 
 # Core MCP and Automation Dependencies
-pydoll-python>=2.3.1      # Revolutionary browser automation library
+pydoll-python>=2.12.4      # Revolutionary browser automation library
 mcp>=1.2.0                # Model Context Protocol core
 pydantic>=2.10.4          # Data validation and settings management
 typing-extensions>=4.0.0  # Extended typing support for older Python versions
 
 # Async and Performance Dependencies
 asyncio-throttle>=1.0.0   # Rate limiting for requests
-aiofiles>=23.2.1,<24.0.0  # Async file operations (compatible with pydoll-python 2.3.1)
+aiofiles>=25.1.0,<26.0.0  # Async file operations (compatible with pydoll-python 2.12.4)
 
 # Configuration and Environment
 python-dotenv>=1.0.0      # Environment variable loading

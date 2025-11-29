@@ -26,13 +26,13 @@ class TestToolDefinitions:
 
     def test_tool_counts(self):
         """Test that tool counts match expected values."""
-        assert len(BROWSER_TOOLS) == 8
+        assert len(BROWSER_TOOLS) == 13  # Added: bring_tab_to_front, set_download_behavior, set_download_path, enable_file_chooser_interception, disable_file_chooser_interception
         assert len(NAVIGATION_TOOLS) == 7
         assert len(ELEMENT_TOOLS) == 4
         assert len(SCREENSHOT_TOOLS) == 3
         assert len(SCRIPT_TOOLS) == 3
-        assert len(PROTECTION_TOOLS) == 12
-        assert len(NETWORK_TOOLS) == 10
+        assert len(PROTECTION_TOOLS) == 14  # Added: enable_cloudflare_auto_solve, disable_cloudflare_auto_solve
+        assert len(NETWORK_TOOLS) == 11  # Added: get_network_response_body
         assert len(FILE_TOOLS) == 8
 
         # Total should match all tools
@@ -73,10 +73,10 @@ class TestToolDefinitions:
         """Test tool category organization."""
         # Match categories defined in __init__.py
         expected_categories = {
-            "browser_management": 8,
+            "browser_management": 13,  # Updated for new tools
             "navigation_control": 7,
             "element_interaction": 4,
-            "page_interaction": 2,
+            "page_interaction": 4,  # Updated: handle_dialog, handle_alert, save_page_as_pdf, save_pdf
             "screenshot_media": 3,
             "script_execution": 3,
             "advanced_automation": 3,
@@ -101,6 +101,11 @@ class TestBrowserTools:
             "close_tab",
             "list_tabs",
             "set_active_tab",
+            "bring_tab_to_front",
+            "set_download_behavior",
+            "set_download_path",
+            "enable_file_chooser_interception",
+            "disable_file_chooser_interception",
         ]
 
         actual_names = [tool.name for tool in BROWSER_TOOLS]
@@ -193,7 +198,7 @@ class TestProtectionTools:
 
     def test_protection_tool_count(self):
         """Test protection tool count."""
-        assert len(PROTECTION_TOOLS) == 12
+        assert len(PROTECTION_TOOLS) == 14  # Added: enable_cloudflare_auto_solve, disable_cloudflare_auto_solve
 
     def test_captcha_tools(self):
         """Test captcha-related tools."""
@@ -217,7 +222,7 @@ class TestNetworkTools:
 
     def test_network_tool_count(self):
         """Test network tool count."""
-        assert len(NETWORK_TOOLS) == 10
+        assert len(NETWORK_TOOLS) == 11  # Added: get_network_response_body
 
     def test_request_interception(self):
         """Test request interception tools."""

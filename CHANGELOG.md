@@ -16,6 +16,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Advanced form recognition
 - GUI setup tool
 
+## [1.5.17] - 2025-11-29
+
+### Added
+- **Enhanced Alert/Dialog Handling**: New `handle_alert` tool for simplified alert/dialog handling with automatic detection
+- **PDF Saving with File Support**: Enhanced `save_pdf` tool with file system support and formatting options (A4, Letter, print background)
+- **Tab Management**: New `bring_tab_to_front` tool for multi-tab focus management
+- **Download Configuration**: New `set_download_behavior` and `set_download_path` tools for download control
+- **File Chooser Interception**: New `enable_file_chooser_interception` and `disable_file_chooser_interception` tools for file upload automation
+- **Network Response Body Retrieval**: New `get_network_response_body` tool to retrieve response bodies for network requests
+- **Cloudflare Auto-Solve Controls**: New `enable_cloudflare_auto_solve` and `disable_cloudflare_auto_solve` tools for captcha automation control
+- **Comprehensive Test Coverage**: Added 21 new tests in `test_new_features.py` covering all new functionality
+
+### Enhanced
+- **File Upload**: `upload_file` now uses real PyDoll API (`expect_file_chooser`) instead of simulation
+- **File Download**: `download_file` now uses real PyDoll API (`expect_download`) with download path configuration
+- **Dialog Handling**: `handle_dialog` enhanced with native PyDoll APIs (`has_dialog`, `get_dialog_message`, `handle_dialog`)
+- **Network Monitoring**: `get_network_logs` now uses real `tab.get_network_logs()` API with proper log processing and filtering
+- **Cloudflare Bypass**: `bypass_cloudflare` enhanced with `expect_and_bypass_cloudflare_captcha` API
+- **PDF Generation**: `save_page_as_pdf` enhanced with file saving capabilities and formatting options
+
+### Fixed
+- **DownloadBehavior Import**: Fixed import path to `pydoll.protocol.browser.types` (was incorrectly `pydoll.browser`)
+- **File Upload Implementation**: Fixed async generator usage for `expect_file_chooser` API
+- **Network Logs Processing**: Improved network log entry processing with proper attribute extraction
+- **Tab Activation**: Enhanced `set_active_tab` to use native `bring_to_front()` API
+
+### Technical Details
+- **Tool Count Updates**:
+  - Browser Management: 8 → 13 tools (+5)
+  - Protection Tools: 12 → 14 tools (+2)
+  - Network Tools: 10 → 11 tools (+1)
+  - Page Tools: 2 → 4 tools (+2)
+  - Total: 79 → 84 tools
+- **API Integration**: All new tools use native PyDoll 2.12.4+ APIs instead of simulations
+- **Error Handling**: Enhanced error handling and logging for all new features
+- **Compatibility**: Full backward compatibility maintained with existing tools
+
 ## [1.5.14] - 2025-07-20
 
 ### Fixed
@@ -316,7 +353,7 @@ This release specifically addresses the critical browser startup and tab managem
 #### 🔧 Tool Loading Issue Fixed
 - **Fixed Missing Tools**: Resolved issue where only 28 out of 79 tools were loading
 - **Added Protection Tools Module**: Created `protection_tools.py` with 12 stealth and bypass tools
-- **Added Network Tools Module**: Created `network_tools.py` with 10 network monitoring tools  
+- **Added Network Tools Module**: Created `network_tools.py` with 10 network monitoring tools
 - **Added File Tools Module**: Created `file_tools.py` with 8 file management tools
 - **Updated Tool Registry**: Modified `__init__.py` to properly import all tool modules
 
@@ -843,7 +880,7 @@ This is the first stable release of PyDoll MCP Server, bringing revolutionary br
 - **Resource Cleanup**: Automatic browser process cleanup and memory management
 - **Status Monitoring**: Comprehensive browser health and status reporting
 
-#### 🧭 Navigation & Page Control  
+#### 🧭 Navigation & Page Control
 - **Smart Navigation**: Intelligent URL navigation with automatic page load detection
 - **Page State Management**: Refresh, history navigation, page readiness detection
 - **Information Extraction**: URL, title, and complete source code retrieval
@@ -924,7 +961,7 @@ This is the first stable release of PyDoll MCP Server, bringing revolutionary br
 - **10 Navigation Tools**: Advanced page navigation and control
 - **15 Element Interaction Tools**: Comprehensive element manipulation
 - **6 Screenshot Tools**: Professional media capture capabilities
-- **8 JavaScript Tools**: Full scripting environment integration  
+- **8 JavaScript Tools**: Full scripting environment integration
 - **12 Protection Bypass Tools**: Advanced anti-detection capabilities
 - **10 Network Tools**: Complete network monitoring and control
 - **8 File Management Tools**: Comprehensive data handling

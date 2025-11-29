@@ -15,7 +15,7 @@ maintainers = [
     {name = "Jinsong Roh", email = "enjoydays@gmail.com"}
 ]
 keywords = [
-    "mcp", "browser-automation", "web-scraping", "captcha-bypass", 
+    "mcp", "browser-automation", "web-scraping", "captcha-bypass",
     "claude", "ai", "automation", "testing", "selenium-alternative",
     "cloudflare", "recaptcha", "anti-detection", "stealth"
 ]
@@ -40,12 +40,12 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-    "pydoll-python>=2.3.1",
+    "pydoll-python>=2.12.4",
     "mcp>=1.2.0",
     "pydantic>=2.10.4",
     "typing-extensions>=4.0.0",
     "asyncio-throttle>=1.0.0",
-    "aiofiles>=23.2.1,<24.0.0",
+    "aiofiles>=25.1.0,<26.0.0",
     "python-dotenv>=1.0.0",
     "rich>=13.0.0",
     "click>=8.1.0",

@@ -1,4 +1,4 @@
-# 🤖 PyDoll MCP Server(pydoll-mcp) v1.5.16
+# 🤖 PyDoll MCP Server(pydoll-mcp) v1.5.17
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/219f2dbc-37ed-4aea-a289-ba39cdbb335d" alt="PyDoll Logo" width="200"/>
@@ -17,7 +17,7 @@
     <img src="https://img.shields.io/pypi/dm/pydoll-mcp?style=flat-square&logo=pypi" alt="PyPI Downloads"/>
   </a>
   <a href="https://pypi.org/project/pydoll-mcp/">
-    <img src="https://img.shields.io/badge/PyPI-v1.5.16-blue?style=flat-square&logo=pypi" alt="PyPI"/>
+    <img src="https://img.shields.io/badge/PyPI-v1.5.17-blue?style=flat-square&logo=pypi" alt="PyPI"/>
   </a>
   <a href="https://github.com/autoscrape-labs/pydoll">
     <img src="https://img.shields.io/badge/Powered%20by-PyDoll-green?style=flat-square" alt="Powered by PyDoll"/>
@@ -30,7 +30,46 @@
   </a>
 </p>
 
-## 📢 Latest Updates (v1.5.16 - 2025-07-20)
+## 📢 Latest Updates (v1.5.17 - 2025-11-29)
+
+### 🚀 PyDoll 2.12.4+ Feature Integration
+
+#### ✨ New Tools & Enhanced Functionality
+- **NEW**: `handle_alert` - Simplified alert/dialog handler with automatic detection
+- **NEW**: `save_pdf` - Enhanced PDF saving with file system support and formatting options
+- **NEW**: `bring_tab_to_front` - Multi-tab focus management for better tab control
+- **NEW**: `set_download_behavior` - Configure download behavior (allow/deny/prompt)
+- **NEW**: `set_download_path` - Set default download directory for browser
+- **NEW**: `enable_file_chooser_interception` / `disable_file_chooser_interception` - File upload automation control
+- **NEW**: `get_network_response_body` - Retrieve response bodies for network requests
+- **NEW**: `enable_cloudflare_auto_solve` / `disable_cloudflare_auto_solve` - Cloudflare captcha automation control
+
+#### 🔧 Enhanced Existing Tools
+- **Enhanced**: `handle_dialog` - Now uses native PyDoll APIs (`has_dialog`, `get_dialog_message`, `handle_dialog`)
+- **Enhanced**: `upload_file` - Real PyDoll API integration with `expect_file_chooser`
+- **Enhanced**: `download_file` - Real PyDoll API integration with `expect_download` and download path configuration
+- **Enhanced**: `get_network_logs` - Real network monitoring using `tab.get_network_logs()`
+- **Enhanced**: `bypass_cloudflare` - Uses `expect_and_bypass_cloudflare_captcha` API
+
+#### 📊 Updated Tool Counts
+- **Browser Management**: 8 → 13 tools (+5 new tools)
+- **Protection Tools**: 12 → 14 tools (+2 new tools)
+- **Network Tools**: 10 → 11 tools (+1 new tool)
+- **Page Tools**: 2 → 4 tools (+2 new tools)
+
+#### 🎯 Technical Improvements
+- **Fixed**: DownloadBehavior enum import path (`pydoll.protocol.browser.types`)
+- **Enhanced**: All file operations now use real PyDoll APIs instead of simulations
+- **Improved**: Network monitoring with proper log processing and filtering
+- **Better**: Tab activation with native `bring_to_front()` API
+- **Added**: Comprehensive test coverage (21 new tests) for all new features
+
+> **🚀 Major Update**: This version brings full PyDoll 2.12.4+ API integration with real browser automation. Upgrade now:
+> ```bash
+> pip install --upgrade pydoll-mcp
+> ```
+
+## 📢 Previous Updates (v1.5.16 - 2025-07-20)
 
 ### 🎯 Critical Browser Control Fixes
 
@@ -227,7 +266,7 @@
 
 #### 📦 Dependency Updates
 - **Updated**: Refined dependency constraints for improved stability
-- **Maintained**: Full compatibility with PyDoll 2.3.1 and aiofiles 23.x
+- **Maintained**: Full compatibility with PyDoll 2.12.4 and aiofiles 25.x
 
 ## 📢 Previous Updates (v1.5.2 - 2025-07-20)
 
@@ -235,14 +274,14 @@
 
 #### ✅ Fixed aiofiles Version Conflict
 - **Fixed**: Resolved deployment issues on Smithery.ai
-- **Updated**: aiofiles requirement to `>=23.2.1,<24.0.0` for PyDoll 2.3.1 compatibility
+- **Updated**: aiofiles requirement to `>=25.1.0,<26.0.0` for PyDoll 2.12.4 compatibility
 
 ## 📢 Previous Updates (v1.5.1 - 2025-07-20)
 
 ### 🐛 Critical Bug Fix
 
 #### ✅ Fixed PyDoll Compatibility Issue
-- **Fixed**: Resolved `ChromiumOptions` incompatibility with PyDoll 2.3.1
+- **Fixed**: Resolved `ChromiumOptions` incompatibility with PyDoll 2.12.4
 - **Fixed**: Removed duplicate browser arguments that caused initialization failures
 - **Fixed**: Eliminated `start_timeout` parameter that wasn't supported by PyDoll
 - **Improved**: Enhanced error handling for browser argument conflicts
@@ -278,10 +317,10 @@
 
 ### Previous Updates (v1.4.3 - 2025-07-20)
 
-### 🚀 Major Update - PyDoll 2.3.1 Compatibility
+### 🚀 Major Update - PyDoll 2.12.4 Compatibility
 
 #### ✨ New Features
-- **✅ PyDoll 2.3.1 Support**: Updated to support latest PyDoll version with enhanced capabilities
+- **✅ PyDoll 2.12.4 Support**: Updated to support latest PyDoll version with enhanced capabilities
 - **✅ Improved Script Selection**: Better DOM element querying and script execution
 - **✅ Enhanced Click Methods**: More reliable click and selection methods
 - **✅ Fetch Command Improvements**: Added fetch command processing with string body support
@@ -318,8 +357,8 @@
 
 ### Previous Updates (v1.2.0 - 2025-07-19)
 
-### 🚀 PyDoll 2.3.1 Support
-- **✅ Upgraded Dependencies**: Now supports PyDoll 2.3.1 with all its new features
+### 🚀 PyDoll 2.12.4 Support
+- **✅ Upgraded Dependencies**: Now supports PyDoll 2.12.4 with all its new features
 - **✅ New Tool - fetch_domain_commands**: Access Chrome DevTools Protocol commands for advanced debugging
 - **✅ New Tool - get_parent_element**: Navigate up the DOM tree to find parent elements
 - **✅ Browser Start Timeout**: Configure browser startup timeout for slower systems
@@ -368,7 +407,7 @@ PyDoll MCP Server brings the groundbreaking capabilities of PyDoll to Claude, Op
 ### PyDoll GitHub and Installation Information
 - GitHub: https://github.com/autoscrape-labs/pydoll
 - How to install: pip install pydoll-python
-- PyDoll version: PyDoll 2.3.1 (2025.06.20)
+- PyDoll version: PyDoll 2.12.4+ (latest, fully integrated)
 - **NEW in v1.2.0**: Enhanced Chrome DevTools Protocol support with domain commands and parent element navigation
 
 ### 🚀 Key Breakthrough Features
@@ -630,6 +669,33 @@ python -m pydoll_mcp.cli status
 "Capture API responses containing pricing data"
 ```
 
+**Alert & Dialog Handling (NEW!):**
+```
+"Handle any alert that appears on the page"
+"Dismiss the confirmation dialog"
+"Accept the prompt and enter 'yes' as the response"
+```
+
+**File Operations (Enhanced!):**
+```
+"Upload the file 'document.pdf' to the file input field"
+"Download the file from this URL and save it to downloads folder"
+"Set the download directory to /path/to/downloads"
+```
+
+**PDF Generation (Enhanced!):**
+```
+"Save the current page as a PDF file"
+"Generate a PDF with A4 format and save to /path/to/output.pdf"
+"Create a PDF with background graphics enabled"
+```
+
+**Tab Management (NEW!):**
+```
+"Bring the tab with ID 'tab-123' to the front"
+"Switch between multiple tabs and manage focus"
+```
+
 ## 🔐 Security & Development
 
 ### 🚨 Repository Maintainers - Important Security Notice
@@ -637,7 +703,7 @@ python -m pydoll_mcp.cli status
 If you're contributing to this repository or setting up automated releases, please read our **[Security Setup Guide](SECURITY_SETUP.md)** to properly configure GitHub Secrets for:
 
 - 🔐 **PyPI API Tokens**: Secure package publishing
-- 🔐 **Smithery.ai API Keys**: Automated registry updates  
+- 🔐 **Smithery.ai API Keys**: Automated registry updates
 - 🔐 **GitHub Actions Security**: Proper workflow permissions
 
 **⚠️ Never commit API keys or tokens to the repository!**
@@ -653,14 +719,14 @@ PyDoll MCP Server follows security best practices:
 ### 🔒 Browser Security
 
 - **Sandboxed Execution**: Each browser runs in isolation
-- **No Data Persistence**: Clears cookies and cache by default  
+- **No Data Persistence**: Clears cookies and cache by default
 - **Stealth Mode**: Advanced anti-detection without compromising security
 - **Safe Automation**: Human-like interactions prevent detection
 
-## 🛠️ Complete Tool Arsenal (79 Tools)
+## 🛠️ Complete Tool Arsenal (84 Tools)
 
 <details>
-<summary><strong>🌐 Browser Management (8 tools)</strong></summary>
+<summary><strong>🌐 Browser Management (13 tools)</strong></summary>
 
 - **start_browser**: Launch Chrome/Edge with advanced configuration
 - **stop_browser**: Gracefully terminate browser with cleanup
@@ -670,6 +736,11 @@ PyDoll MCP Server follows security best practices:
 - **list_tabs**: Display detailed tab information
 - **set_active_tab**: Switch between tabs seamlessly
 - **get_browser_status**: Comprehensive health reporting
+- **bring_tab_to_front**: Bring tab to front for multi-tab focus management (NEW!)
+- **set_download_behavior**: Configure download behavior (allow/deny/prompt) (NEW!)
+- **set_download_path**: Set default download directory (NEW!)
+- **enable_file_chooser_interception**: Enable file chooser dialog interception for upload automation (NEW!)
+- **disable_file_chooser_interception**: Disable file chooser interception (NEW!)
 
 </details>
 
@@ -725,6 +796,16 @@ PyDoll MCP Server follows security best practices:
 </details>
 
 <details>
+<summary><strong>📄 Page Interaction (4 tools)</strong></summary>
+
+- **handle_dialog**: Handle JavaScript dialogs (alert/confirm/prompt) with native PyDoll APIs
+- **handle_alert**: Simplified alert/dialog handler with automatic detection (NEW!)
+- **save_page_as_pdf**: Save current page as PDF with base64 encoding
+- **save_pdf**: Enhanced PDF saving with file system support and formatting options (NEW!)
+
+</details>
+
+<details>
 <summary><strong>⚡ JavaScript & Advanced Scripting (8 tools)</strong></summary>
 
 - **execute_script**: Full JavaScript execution environment
@@ -739,9 +820,9 @@ PyDoll MCP Server follows security best practices:
 </details>
 
 <details>
-<summary><strong>🛡️ Protection Bypass & Stealth (12 tools)</strong></summary>
+<summary><strong>🛡️ Protection Bypass & Stealth (14 tools)</strong></summary>
 
-- **bypass_cloudflare**: Automatic Turnstile solving
+- **bypass_cloudflare**: Automatic Turnstile solving with real PyDoll API
 - **bypass_recaptcha**: reCAPTCHA v3 intelligent bypass
 - **enable_stealth_mode**: Advanced anti-detection
 - **simulate_human_behavior**: Realistic user patterns
@@ -753,11 +834,13 @@ PyDoll MCP Server follows security best practices:
 - **user_agent_rotation**: User agent randomization
 - **header_spoofing**: Request header manipulation
 - **timing_randomization**: Human-like timing patterns
+- **enable_cloudflare_auto_solve**: Enable automatic Cloudflare captcha solving (NEW!)
+- **disable_cloudflare_auto_solve**: Disable automatic Cloudflare solving (NEW!)
 
 </details>
 
 <details>
-<summary><strong>🌐 Network Control & Monitoring (10 tools)</strong></summary>
+<summary><strong>🌐 Network Control & Monitoring (11 tools)</strong></summary>
 
 - **network_monitoring**: Comprehensive traffic analysis
 - **intercept_requests**: Real-time request modification
@@ -765,7 +848,8 @@ PyDoll MCP Server follows security best practices:
 - **modify_headers**: Dynamic header injection
 - **block_resources**: Resource blocking for performance
 - **simulate_network_conditions**: Throttling and latency
-- **get_network_logs**: Detailed activity reporting
+- **get_network_logs**: Detailed activity reporting using real PyDoll API
+- **get_network_response_body**: Retrieve response bodies for specific requests (NEW!)
 - **monitor_websockets**: WebSocket connection tracking
 - **analyze_performance**: Page performance metrics
 - **cache_management**: Browser cache control
@@ -775,8 +859,8 @@ PyDoll MCP Server follows security best practices:
 <details>
 <summary><strong>📁 File & Data Management (8 tools)</strong></summary>
 
-- **upload_file**: Advanced file upload handling
-- **download_file**: Controlled downloading with progress
+- **upload_file**: Advanced file upload handling using `expect_file_chooser` API
+- **download_file**: Controlled downloading with `expect_download` API and path configuration
 - **extract_page_data**: Structured data extraction
 - **export_data**: Multi-format data export
 - **import_configuration**: Settings import/export
@@ -814,7 +898,7 @@ pip install pydoll-mcp
 
 #### Tool Count Inconsistency (FIXED in v1.1.3!)
 ```bash
-# All commands now report consistent tool count (77 tools)
+# All commands now report consistent tool count (84 tools in v1.5.17+)
 python -m pydoll_mcp.cli status
 python -m pydoll_mcp.cli test-installation
 ```
@@ -895,9 +979,38 @@ export PYDOLL_LOG_LEVEL=DEBUG
 python -m pydoll_mcp.server --debug
 ```
 
-## 🆕 What's New in v1.2.0
+## 🆕 What's New in v1.5.17
 
-### Enhanced PyDoll 2.3.1 Integration
+### 🚀 PyDoll 2.12.4+ Full Integration
+- **✨ Real API Integration**: All tools now use native PyDoll APIs instead of simulations
+- **📄 Enhanced Page Tools**: New alert handling and PDF saving with file support
+- **🌐 Advanced Tab Management**: Multi-tab focus control with `bring_tab_to_front`
+- **📥 Download Configuration**: Full control over download behavior and paths
+- **📤 File Upload Automation**: Real file chooser interception for seamless uploads
+- **🌐 Network Monitoring**: Real network logs and response body retrieval
+- **🛡️ Cloudflare Control**: Enable/disable automatic captcha solving
+
+### New Tools Added
+- **Page Tools**: `handle_alert`, `save_pdf` (enhanced)
+- **Browser Tools**: `bring_tab_to_front`, `set_download_behavior`, `set_download_path`, `enable_file_chooser_interception`, `disable_file_chooser_interception`
+- **Network Tools**: `get_network_response_body`
+- **Protection Tools**: `enable_cloudflare_auto_solve`, `disable_cloudflare_auto_solve`
+
+### Enhanced Existing Tools
+- **File Operations**: Real PyDoll API integration (`expect_file_chooser`, `expect_download`)
+- **Network Monitoring**: Real `get_network_logs` API with proper filtering
+- **Cloudflare Bypass**: Uses `expect_and_bypass_cloudflare_captcha` API
+- **Dialog Handling**: Native `has_dialog`, `get_dialog_message`, `handle_dialog` APIs
+
+### Tool Count: **84 Tools** → More Powerful Than Ever!
+- **Browser Management**: 13 tools (+5 new)
+- **Protection Tools**: 14 tools (+2 new)
+- **Network Tools**: 11 tools (+1 new)
+- **Page Tools**: 4 tools (+2 new)
+
+## 🆕 Previous: What's New in v1.2.0
+
+### Enhanced PyDoll 2.12.4 Integration
 - **🔧 New Chrome DevTools Commands**: Access all Chrome DevTools Protocol domain commands
 - **📍 Parent Element Navigation**: Get parent elements with detailed attributes
 - **⏱️ Configurable Browser Timeout**: Customize startup timeout for better reliability
@@ -913,11 +1026,6 @@ python -m pydoll_mcp.cli setup-info     # Show current config status
 python -m pydoll_mcp.cli restore-config # Restore from backup
 python -m pydoll_mcp.cli remove-config  # Clean removal
 ```
-
-### Tool Count: **79 Tools** → More Powerful Than Ever!
-- **New Navigation Tools**: fetch_domain_commands for Chrome DevTools access
-- **New Element Tools**: get_parent_element for improved DOM navigation
-- **Enhanced Browser Management**: Configurable startup timeout options
 
 ## 📊 Performance Metrics
 
