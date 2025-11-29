@@ -60,8 +60,8 @@ class TestBrowserIntegration:
         assert browser_id not in browser_manager.browsers
 
     @pytest.mark.asyncio
-    async def test_multiple_tabs(self, browser_manager):
-        """Test multiple tab management."""
+    async def test_single_tab_navigation(self, browser_manager):
+        """Test single tab management and navigation."""
         instance = await browser_manager.create_browser(headless=True)
         browser_id = instance.instance_id
 
