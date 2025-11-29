@@ -320,6 +320,309 @@ NETWORK_TOOLS = [
             },
             "required": ["browser_id", "file_name"]
         }
+    ),
+    Tool(
+        name="enable_dom_events",
+        description="Enable DOM event monitoring",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Optional tab ID, uses active tab if not specified"
+                }
+            },
+            "required": ["browser_id"]
+        }
+    ),
+    Tool(
+        name="disable_dom_events",
+        description="Disable DOM event monitoring",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Optional tab ID, uses active tab if not specified"
+                }
+            },
+            "required": ["browser_id"]
+        }
+    ),
+    Tool(
+        name="enable_network_events",
+        description="Enable network event monitoring",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Optional tab ID, uses active tab if not specified"
+                }
+            },
+            "required": ["browser_id"]
+        }
+    ),
+    Tool(
+        name="disable_network_events",
+        description="Disable network event monitoring",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Optional tab ID, uses active tab if not specified"
+                }
+            },
+            "required": ["browser_id"]
+        }
+    ),
+    Tool(
+        name="enable_page_events",
+        description="Enable page event monitoring",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Optional tab ID, uses active tab if not specified"
+                }
+            },
+            "required": ["browser_id"]
+        }
+    ),
+    Tool(
+        name="disable_page_events",
+        description="Disable page event monitoring",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Optional tab ID, uses active tab if not specified"
+                }
+            },
+            "required": ["browser_id"]
+        }
+    ),
+    Tool(
+        name="enable_fetch_events",
+        description="Enable fetch event monitoring",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Optional tab ID, uses active tab if not specified"
+                }
+            },
+            "required": ["browser_id"]
+        }
+    ),
+    Tool(
+        name="disable_fetch_events",
+        description="Disable fetch event monitoring",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Optional tab ID, uses active tab if not specified"
+                }
+            },
+            "required": ["browser_id"]
+        }
+    ),
+    Tool(
+        name="enable_runtime_events",
+        description="Enable runtime event monitoring",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Optional tab ID, uses active tab if not specified"
+                }
+            },
+            "required": ["browser_id"]
+        }
+    ),
+    Tool(
+        name="disable_runtime_events",
+        description="Disable runtime event monitoring",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Optional tab ID, uses active tab if not specified"
+                }
+            },
+            "required": ["browser_id"]
+        }
+    ),
+    Tool(
+        name="get_event_status",
+        description="Get the current status of all event monitoring",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Optional tab ID, uses active tab if not specified"
+                }
+            },
+            "required": ["browser_id"]
+        }
+    ),
+    Tool(
+        name="modify_request",
+        description="Modify an intercepted network request (URL, method, headers, post data)",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Optional tab ID, uses active tab if not specified"
+                },
+                "request_id": {
+                    "type": "string",
+                    "description": "Request ID from intercepted request"
+                },
+                "url": {
+                    "type": "string",
+                    "description": "New URL for the request"
+                },
+                "method": {
+                    "type": "string",
+                    "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
+                    "description": "New HTTP method"
+                },
+                "headers": {
+                    "type": "object",
+                    "additionalProperties": {"type": "string"},
+                    "description": "New or modified headers"
+                },
+                "post_data": {
+                    "type": "string",
+                    "description": "New POST data"
+                }
+            },
+            "required": ["browser_id", "request_id"]
+        }
+    ),
+    Tool(
+        name="fulfill_request",
+        description="Fulfill an intercepted request with a custom response (mock response)",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Optional tab ID, uses active tab if not specified"
+                },
+                "request_id": {
+                    "type": "string",
+                    "description": "Request ID from intercepted request"
+                },
+                "status": {
+                    "type": "integer",
+                    "description": "HTTP status code for the response"
+                },
+                "headers": {
+                    "type": "object",
+                    "additionalProperties": {"type": "string"},
+                    "description": "Response headers"
+                },
+                "body": {
+                    "type": "string",
+                    "description": "Response body"
+                }
+            },
+            "required": ["browser_id", "request_id", "status"]
+        }
+    ),
+    Tool(
+        name="continue_with_auth",
+        description="Continue an intercepted request with HTTP authentication",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Optional tab ID, uses active tab if not specified"
+                },
+                "request_id": {
+                    "type": "string",
+                    "description": "Request ID from intercepted request"
+                },
+                "username": {
+                    "type": "string",
+                    "description": "HTTP authentication username"
+                },
+                "password": {
+                    "type": "string",
+                    "description": "HTTP authentication password"
+                }
+            },
+            "required": ["browser_id", "request_id", "username", "password"]
+        }
     )
 ]
 
@@ -329,22 +632,50 @@ async def handle_intercept_network_requests(arguments: Dict[str, Any]) -> Sequen
     """Handle network request interception."""
     browser_id = arguments["browser_id"]
     action = arguments["action"]
+    tab_id = arguments.get("tab_id")
 
     try:
+        browser_manager = get_browser_manager()
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+
         if action == "start":
             patterns = arguments.get("patterns", ["*"])
+            modify_requests = arguments.get("modify_requests", False)
+            modify_responses = arguments.get("modify_responses", False)
+
+            # Check if PyDoll has request interception API
+            if hasattr(tab, 'enable_request_interception'):
+                await tab.enable_request_interception()
+            elif hasattr(tab, 'set_request_interception'):
+                await tab.set_request_interception(True)
+
             result_data = {
                 "action": "started",
                 "patterns": patterns,
-                "modify_requests": arguments.get("modify_requests", False),
-                "modify_responses": arguments.get("modify_responses", False)
+                "modify_requests": modify_requests,
+                "modify_responses": modify_responses,
+                "browser_id": browser_id,
+                "tab_id": actual_tab_id
             }
             message = "Network interception started"
         elif action == "stop":
-            result_data = {"action": "stopped"}
+            if hasattr(tab, 'disable_request_interception'):
+                await tab.disable_request_interception()
+            elif hasattr(tab, 'set_request_interception'):
+                await tab.set_request_interception(False)
+
+            result_data = {
+                "action": "stopped",
+                "browser_id": browser_id,
+                "tab_id": actual_tab_id
+            }
             message = "Network interception stopped"
         else:  # configure
-            result_data = {"action": "configured"}
+            result_data = {
+                "action": "configured",
+                "browser_id": browser_id,
+                "tab_id": actual_tab_id
+            }
             message = "Network interception configured"
 
         result = OperationResult(
@@ -728,6 +1059,538 @@ async def handle_save_har(arguments: Dict[str, Any]) -> Sequence[TextContent]:
 
     return [TextContent(type="text", text=json.dumps(result.dict()))]
 
+# Event Control Handlers
+
+async def handle_enable_dom_events(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle enable DOM events request."""
+    try:
+        browser_manager = get_browser_manager()
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+        browser_instance = await browser_manager.get_browser(browser_id)
+
+        if hasattr(tab, 'enable_dom_events'):
+            await tab.enable_dom_events()
+        else:
+            logger.warning("PyDoll tab does not support enable_dom_events")
+
+        # Track event state
+        if browser_instance:
+            if not hasattr(browser_instance, 'event_states'):
+                browser_instance.event_states = {}
+            browser_instance.event_states['dom_events'] = True
+
+        result = OperationResult(
+            success=True,
+            message="DOM events enabled",
+            data={"browser_id": browser_id, "tab_id": actual_tab_id}
+        )
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+    except Exception as e:
+        logger.error(f"Failed to enable DOM events: {e}")
+        result = OperationResult(success=False, error=str(e), message="Failed to enable DOM events")
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+async def handle_disable_dom_events(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle disable DOM events request."""
+    try:
+        browser_manager = get_browser_manager()
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+        browser_instance = await browser_manager.get_browser(browser_id)
+
+        if hasattr(tab, 'disable_dom_events'):
+            await tab.disable_dom_events()
+        else:
+            logger.warning("PyDoll tab does not support disable_dom_events")
+
+        # Track event state
+        if browser_instance:
+            if not hasattr(browser_instance, 'event_states'):
+                browser_instance.event_states = {}
+            browser_instance.event_states['dom_events'] = False
+
+        result = OperationResult(
+            success=True,
+            message="DOM events disabled",
+            data={"browser_id": browser_id, "tab_id": actual_tab_id}
+        )
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+    except Exception as e:
+        logger.error(f"Failed to disable DOM events: {e}")
+        result = OperationResult(success=False, error=str(e), message="Failed to disable DOM events")
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+async def handle_enable_network_events(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle enable network events request."""
+    try:
+        browser_manager = get_browser_manager()
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+        browser_instance = await browser_manager.get_browser(browser_id)
+
+        if hasattr(tab, 'enable_network_events'):
+            await tab.enable_network_events()
+        else:
+            logger.warning("PyDoll tab does not support enable_network_events")
+
+        if browser_instance:
+            if not hasattr(browser_instance, 'event_states'):
+                browser_instance.event_states = {}
+            browser_instance.event_states['network_events'] = True
+
+        result = OperationResult(
+            success=True,
+            message="Network events enabled",
+            data={"browser_id": browser_id, "tab_id": actual_tab_id}
+        )
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+    except Exception as e:
+        logger.error(f"Failed to enable network events: {e}")
+        result = OperationResult(success=False, error=str(e), message="Failed to enable network events")
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+async def handle_disable_network_events(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle disable network events request."""
+    try:
+        browser_manager = get_browser_manager()
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+        browser_instance = await browser_manager.get_browser(browser_id)
+
+        if hasattr(tab, 'disable_network_events'):
+            await tab.disable_network_events()
+        else:
+            logger.warning("PyDoll tab does not support disable_network_events")
+
+        if browser_instance:
+            if not hasattr(browser_instance, 'event_states'):
+                browser_instance.event_states = {}
+            browser_instance.event_states['network_events'] = False
+
+        result = OperationResult(
+            success=True,
+            message="Network events disabled",
+            data={"browser_id": browser_id, "tab_id": actual_tab_id}
+        )
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+    except Exception as e:
+        logger.error(f"Failed to disable network events: {e}")
+        result = OperationResult(success=False, error=str(e), message="Failed to disable network events")
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+async def handle_enable_page_events(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle enable page events request."""
+    try:
+        browser_manager = get_browser_manager()
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+        browser_instance = await browser_manager.get_browser(browser_id)
+
+        if hasattr(tab, 'enable_page_events'):
+            await tab.enable_page_events()
+        else:
+            logger.warning("PyDoll tab does not support enable_page_events")
+
+        if browser_instance:
+            if not hasattr(browser_instance, 'event_states'):
+                browser_instance.event_states = {}
+            browser_instance.event_states['page_events'] = True
+
+        result = OperationResult(
+            success=True,
+            message="Page events enabled",
+            data={"browser_id": browser_id, "tab_id": actual_tab_id}
+        )
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+    except Exception as e:
+        logger.error(f"Failed to enable page events: {e}")
+        result = OperationResult(success=False, error=str(e), message="Failed to enable page events")
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+async def handle_disable_page_events(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle disable page events request."""
+    try:
+        browser_manager = get_browser_manager()
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+        browser_instance = await browser_manager.get_browser(browser_id)
+
+        if hasattr(tab, 'disable_page_events'):
+            await tab.disable_page_events()
+        else:
+            logger.warning("PyDoll tab does not support disable_page_events")
+
+        if browser_instance:
+            if not hasattr(browser_instance, 'event_states'):
+                browser_instance.event_states = {}
+            browser_instance.event_states['page_events'] = False
+
+        result = OperationResult(
+            success=True,
+            message="Page events disabled",
+            data={"browser_id": browser_id, "tab_id": actual_tab_id}
+        )
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+    except Exception as e:
+        logger.error(f"Failed to disable page events: {e}")
+        result = OperationResult(success=False, error=str(e), message="Failed to disable page events")
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+async def handle_enable_fetch_events(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle enable fetch events request."""
+    try:
+        browser_manager = get_browser_manager()
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+        browser_instance = await browser_manager.get_browser(browser_id)
+
+        if hasattr(tab, 'enable_fetch_events'):
+            await tab.enable_fetch_events()
+        else:
+            logger.warning("PyDoll tab does not support enable_fetch_events")
+
+        if browser_instance:
+            if not hasattr(browser_instance, 'event_states'):
+                browser_instance.event_states = {}
+            browser_instance.event_states['fetch_events'] = True
+
+        result = OperationResult(
+            success=True,
+            message="Fetch events enabled",
+            data={"browser_id": browser_id, "tab_id": actual_tab_id}
+        )
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+    except Exception as e:
+        logger.error(f"Failed to enable fetch events: {e}")
+        result = OperationResult(success=False, error=str(e), message="Failed to enable fetch events")
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+async def handle_disable_fetch_events(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle disable fetch events request."""
+    try:
+        browser_manager = get_browser_manager()
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+        browser_instance = await browser_manager.get_browser(browser_id)
+
+        if hasattr(tab, 'disable_fetch_events'):
+            await tab.disable_fetch_events()
+        else:
+            logger.warning("PyDoll tab does not support disable_fetch_events")
+
+        if browser_instance:
+            if not hasattr(browser_instance, 'event_states'):
+                browser_instance.event_states = {}
+            browser_instance.event_states['fetch_events'] = False
+
+        result = OperationResult(
+            success=True,
+            message="Fetch events disabled",
+            data={"browser_id": browser_id, "tab_id": actual_tab_id}
+        )
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+    except Exception as e:
+        logger.error(f"Failed to disable fetch events: {e}")
+        result = OperationResult(success=False, error=str(e), message="Failed to disable fetch events")
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+async def handle_enable_runtime_events(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle enable runtime events request."""
+    try:
+        browser_manager = get_browser_manager()
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+        browser_instance = await browser_manager.get_browser(browser_id)
+
+        if hasattr(tab, 'enable_runtime_events'):
+            await tab.enable_runtime_events()
+        else:
+            logger.warning("PyDoll tab does not support enable_runtime_events")
+
+        if browser_instance:
+            if not hasattr(browser_instance, 'event_states'):
+                browser_instance.event_states = {}
+            browser_instance.event_states['runtime_events'] = True
+
+        result = OperationResult(
+            success=True,
+            message="Runtime events enabled",
+            data={"browser_id": browser_id, "tab_id": actual_tab_id}
+        )
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+    except Exception as e:
+        logger.error(f"Failed to enable runtime events: {e}")
+        result = OperationResult(success=False, error=str(e), message="Failed to enable runtime events")
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+async def handle_disable_runtime_events(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle disable runtime events request."""
+    try:
+        browser_manager = get_browser_manager()
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+        browser_instance = await browser_manager.get_browser(browser_id)
+
+        if hasattr(tab, 'disable_runtime_events'):
+            await tab.disable_runtime_events()
+        else:
+            logger.warning("PyDoll tab does not support disable_runtime_events")
+
+        if browser_instance:
+            if not hasattr(browser_instance, 'event_states'):
+                browser_instance.event_states = {}
+            browser_instance.event_states['runtime_events'] = False
+
+        result = OperationResult(
+            success=True,
+            message="Runtime events disabled",
+            data={"browser_id": browser_id, "tab_id": actual_tab_id}
+        )
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+    except Exception as e:
+        logger.error(f"Failed to disable runtime events: {e}")
+        result = OperationResult(success=False, error=str(e), message="Failed to disable runtime events")
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+async def handle_get_event_status(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle get event status request."""
+    try:
+        browser_manager = get_browser_manager()
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+        browser_instance = await browser_manager.get_browser(browser_id)
+
+        event_status = {}
+
+        # Check PyDoll tab properties if available
+        if hasattr(tab, 'dom_events_enabled'):
+            event_status['dom_events'] = tab.dom_events_enabled
+        if hasattr(tab, 'network_events_enabled'):
+            event_status['network_events'] = tab.network_events_enabled
+        if hasattr(tab, 'page_events_enabled'):
+            event_status['page_events'] = tab.page_events_enabled
+        if hasattr(tab, 'fetch_events_enabled'):
+            event_status['fetch_events'] = tab.fetch_events_enabled
+        if hasattr(tab, 'runtime_events_enabled'):
+            event_status['runtime_events'] = tab.runtime_events_enabled
+
+        # Fallback to stored states
+        if browser_instance and hasattr(browser_instance, 'event_states'):
+            for event_type, state in browser_instance.event_states.items():
+                if event_type not in event_status:
+                    event_status[event_type] = state
+
+        result = OperationResult(
+            success=True,
+            message="Event status retrieved",
+            data={
+                "browser_id": browser_id,
+                "tab_id": actual_tab_id,
+                "event_status": event_status
+            }
+        )
+        return [TextContent(type="text", text=result.json())]
+    except Exception as e:
+        logger.error(f"Failed to get event status: {e}")
+        result = OperationResult(success=False, error=str(e), message="Failed to get event status")
+        return [TextContent(type="text", text=result.json())]
+
+async def handle_modify_request(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle modify request request."""
+    try:
+        browser_manager = get_browser_manager()
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+        request_id = arguments["request_id"]
+        url = arguments.get("url")
+        method = arguments.get("method")
+        headers = arguments.get("headers")
+        post_data = arguments.get("post_data")
+
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+
+        # Check if PyDoll has continue_request method
+        if hasattr(tab, 'continue_request'):
+            try:
+                await tab.continue_request(
+                    request_id=request_id,
+                    url=url,
+                    method=method,
+                    headers=headers,
+                    post_data=post_data
+                )
+
+                result = OperationResult(
+                    success=True,
+                    message="Request modified successfully",
+                    data={
+                        "browser_id": browser_id,
+                        "tab_id": actual_tab_id,
+                        "request_id": request_id,
+                        "modifications": {
+                            "url": url,
+                            "method": method,
+                            "headers": headers,
+                            "post_data": post_data is not None
+                        }
+                    }
+                )
+                return [TextContent(type="text", text=json.dumps(result.dict()))]
+            except Exception as e:
+                logger.warning(f"PyDoll continue_request failed: {e}")
+                result = OperationResult(
+                    success=False,
+                    error=str(e),
+                    message="Failed to modify request - PyDoll API may not support this feature"
+                )
+                return [TextContent(type="text", text=json.dumps(result.dict()))]
+        else:
+            result = OperationResult(
+                success=False,
+                error="Request modification not supported",
+                message="PyDoll tab does not support continue_request method"
+            )
+            return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+    except Exception as e:
+        logger.error(f"Failed to modify request: {e}")
+        result = OperationResult(success=False, error=str(e), message="Failed to modify request")
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+async def handle_fulfill_request(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle fulfill request request."""
+    try:
+        browser_manager = get_browser_manager()
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+        request_id = arguments["request_id"]
+        status = arguments["status"]
+        headers = arguments.get("headers", {})
+        body = arguments.get("body", "")
+
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+
+        # Check if PyDoll has fulfill_request method
+        if hasattr(tab, 'fulfill_request'):
+            try:
+                await tab.fulfill_request(
+                    request_id=request_id,
+                    status=status,
+                    headers=headers,
+                    body=body
+                )
+
+                result = OperationResult(
+                    success=True,
+                    message="Request fulfilled successfully",
+                    data={
+                        "browser_id": browser_id,
+                        "tab_id": actual_tab_id,
+                        "request_id": request_id,
+                        "status": status,
+                        "headers": headers,
+                        "body_size": len(body) if body else 0
+                    }
+                )
+                return [TextContent(type="text", text=json.dumps(result.dict()))]
+            except Exception as e:
+                logger.warning(f"PyDoll fulfill_request failed: {e}")
+                result = OperationResult(
+                    success=False,
+                    error=str(e),
+                    message="Failed to fulfill request - PyDoll API may not support this feature"
+                )
+                return [TextContent(type="text", text=json.dumps(result.dict()))]
+        else:
+            result = OperationResult(
+                success=False,
+                error="Request fulfillment not supported",
+                message="PyDoll tab does not support fulfill_request method"
+            )
+            return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+    except Exception as e:
+        logger.error(f"Failed to fulfill request: {e}")
+        result = OperationResult(success=False, error=str(e), message="Failed to fulfill request")
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+async def handle_continue_with_auth(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle continue with auth request."""
+    try:
+        browser_manager = get_browser_manager()
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+        request_id = arguments["request_id"]
+        username = arguments["username"]
+        password = arguments["password"]
+
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+
+        # Check if PyDoll has continue_with_auth method
+        if hasattr(tab, 'continue_with_auth'):
+            try:
+                await tab.continue_with_auth(
+                    request_id=request_id,
+                    username=username,
+                    password=password
+                )
+
+                result = OperationResult(
+                    success=True,
+                    message="Request continued with authentication",
+                    data={
+                        "browser_id": browser_id,
+                        "tab_id": actual_tab_id,
+                        "request_id": request_id,
+                        "username": username
+                    }
+                )
+                return [TextContent(type="text", text=json.dumps(result.dict()))]
+            except Exception as e:
+                logger.warning(f"PyDoll continue_with_auth failed: {e}")
+                result = OperationResult(
+                    success=False,
+                    error=str(e),
+                    message="Failed to continue with auth - PyDoll API may not support this feature"
+                )
+                return [TextContent(type="text", text=json.dumps(result.dict()))]
+        else:
+            result = OperationResult(
+                success=False,
+                error="HTTP authentication not supported",
+                message="PyDoll tab does not support continue_with_auth method"
+            )
+            return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+    except Exception as e:
+        logger.error(f"Failed to continue with auth: {e}")
+        result = OperationResult(success=False, error=str(e), message="Failed to continue with auth")
+        return [TextContent(type="text", text=json.dumps(result.dict()))]
+
+
 # Tool Handlers Registry
 NETWORK_TOOL_HANDLERS = {
     "intercept_network_requests": handle_intercept_network_requests,
@@ -740,5 +1603,19 @@ NETWORK_TOOL_HANDLERS = {
     "analyze_performance": handle_analyze_performance,
     "throttle_network": handle_throttle_network,
     "clear_cache": handle_clear_cache,
-    "save_har": handle_save_har
+    "save_har": handle_save_har,
+    "enable_dom_events": handle_enable_dom_events,
+    "disable_dom_events": handle_disable_dom_events,
+    "enable_network_events": handle_enable_network_events,
+    "disable_network_events": handle_disable_network_events,
+    "enable_page_events": handle_enable_page_events,
+    "disable_page_events": handle_disable_page_events,
+    "enable_fetch_events": handle_enable_fetch_events,
+    "disable_fetch_events": handle_disable_fetch_events,
+    "enable_runtime_events": handle_enable_runtime_events,
+    "disable_runtime_events": handle_disable_runtime_events,
+    "get_event_status": handle_get_event_status,
+    "modify_request": handle_modify_request,
+    "fulfill_request": handle_fulfill_request,
+    "continue_with_auth": handle_continue_with_auth,
 }

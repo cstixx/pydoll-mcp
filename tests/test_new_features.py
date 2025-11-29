@@ -17,6 +17,7 @@ import os
 import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch, Mock
+from mcp.types import TextContent
 
 from pydoll_mcp.tools.page_tools import (
     handle_handle_alert,
@@ -47,6 +48,40 @@ from pydoll_mcp.tools.protection_tools import (
     handle_enable_cloudflare_auto_solve,
     handle_disable_cloudflare_auto_solve,
     PROTECTION_TOOL_HANDLERS
+)
+from pydoll_mcp.tools.element_tools import (
+    handle_find_or_wait_element,
+    handle_query,
+    handle_press_key,
+    ELEMENT_TOOL_HANDLERS
+)
+from pydoll_mcp.tools.navigation_tools import (
+    handle_scroll,
+    handle_get_frame,
+    NAVIGATION_TOOL_HANDLERS
+)
+from pydoll_mcp.tools.browser_tools import (
+    handle_create_browser_context,
+    handle_list_browser_contexts,
+    handle_delete_browser_context,
+    handle_grant_permissions,
+    handle_reset_permissions,
+)
+from pydoll_mcp.tools.network_tools import (
+    handle_enable_dom_events,
+    handle_disable_dom_events,
+    handle_enable_network_events,
+    handle_disable_network_events,
+    handle_enable_page_events,
+    handle_disable_page_events,
+    handle_enable_fetch_events,
+    handle_disable_fetch_events,
+    handle_enable_runtime_events,
+    handle_disable_runtime_events,
+    handle_get_event_status,
+    handle_modify_request,
+    handle_fulfill_request,
+    handle_continue_with_auth,
 )
 
 
@@ -577,4 +612,885 @@ class TestToolRegistration:
         """Test that new protection tools are registered."""
         assert "enable_cloudflare_auto_solve" in PROTECTION_TOOL_HANDLERS
         assert "disable_cloudflare_auto_solve" in PROTECTION_TOOL_HANDLERS
+
+    def test_element_tool_handlers_registered(self):
+        """Test that new element tools are registered."""
+        assert "find_or_wait_element" in ELEMENT_TOOL_HANDLERS
+        assert "query" in ELEMENT_TOOL_HANDLERS
+        assert "press_key" in ELEMENT_TOOL_HANDLERS
+
+    def test_navigation_tool_handlers_registered(self):
+        """Test that new navigation tools are registered."""
+        assert "scroll" in NAVIGATION_TOOL_HANDLERS
+        assert "get_frame" in NAVIGATION_TOOL_HANDLERS
+
+    def test_browser_context_handlers_registered(self):
+        """Test that browser context tools are registered."""
+        assert "create_browser_context" in BROWSER_TOOL_HANDLERS
+        assert "list_browser_contexts" in BROWSER_TOOL_HANDLERS
+        assert "delete_browser_context" in BROWSER_TOOL_HANDLERS
+        assert "grant_permissions" in BROWSER_TOOL_HANDLERS
+        assert "reset_permissions" in BROWSER_TOOL_HANDLERS
+
+    def test_network_event_handlers_registered(self):
+        """Test that event control tools are registered."""
+        assert "enable_dom_events" in NETWORK_TOOL_HANDLERS
+        assert "disable_dom_events" in NETWORK_TOOL_HANDLERS
+        assert "enable_network_events" in NETWORK_TOOL_HANDLERS
+        assert "disable_network_events" in NETWORK_TOOL_HANDLERS
+        assert "enable_page_events" in NETWORK_TOOL_HANDLERS
+        assert "disable_page_events" in NETWORK_TOOL_HANDLERS
+        assert "enable_fetch_events" in NETWORK_TOOL_HANDLERS
+        assert "disable_fetch_events" in NETWORK_TOOL_HANDLERS
+        assert "enable_runtime_events" in NETWORK_TOOL_HANDLERS
+        assert "disable_runtime_events" in NETWORK_TOOL_HANDLERS
+        assert "get_event_status" in NETWORK_TOOL_HANDLERS
+        assert "modify_request" in NETWORK_TOOL_HANDLERS
+        assert "fulfill_request" in NETWORK_TOOL_HANDLERS
+        assert "continue_with_auth" in NETWORK_TOOL_HANDLERS
+
+
+class TestElementFindingEnhancements:
+    """Test element finding enhancements."""
+
+    @pytest.mark.asyncio
+    async def test_find_or_wait_element_success(self):
+        """Test find_or_wait_element when element is found."""
+        with patch('pydoll_mcp.tools.element_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_tab = AsyncMock()
+            mock_element = Mock()
+            mock_element.tag_name = "button"
+            mock_element.text = "Click Me"
+            mock_element.id = "btn-1"
+            mock_element.class_name = "primary"
+            mock_element.name = None
+            mock_element.type = None
+            mock_element.href = None
+
+            # Element found on first try
+            mock_tab.find = AsyncMock(return_value=mock_element)
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+
+            result = await handle_find_or_wait_element({
+                "browser_id": "browser-1",
+                "id": "btn-1",
+                "timeout": 30,
+                "poll_interval": 0.5
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert result_data["data"]["element"]["id"] == "btn-1"
+            assert result_data["data"]["element"]["tag_name"] == "button"
+
+    @pytest.mark.asyncio
+    async def test_find_or_wait_element_timeout(self):
+        """Test find_or_wait_element when element is not found (timeout)."""
+        with patch('pydoll_mcp.tools.element_tools.get_browser_manager') as mock_manager:
+            import asyncio
+            mock_browser_manager = AsyncMock()
+            mock_tab = AsyncMock()
+
+            # Element never found
+            mock_tab.find = AsyncMock(return_value=None)
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+
+            result = await handle_find_or_wait_element({
+                "browser_id": "browser-1",
+                "id": "non-existent",
+                "timeout": 1,  # Short timeout for testing
+                "poll_interval": 0.1
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is False
+            assert "timeout" in result_data["error"].lower() or "not found" in result_data["error"].lower()
+
+    @pytest.mark.asyncio
+    async def test_query_css_selector(self):
+        """Test query tool with CSS selector."""
+        with patch('pydoll_mcp.tools.element_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_tab = AsyncMock()
+            mock_element = Mock()
+            mock_element.tag_name = "div"
+            mock_element.text = "Test Content"
+            mock_element.id = "test-div"
+            mock_element.class_name = "container"
+            mock_element.name = None
+            mock_element.type = None
+            mock_element.href = None
+
+            mock_tab.query = AsyncMock(return_value=mock_element)
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+
+            result = await handle_query({
+                "browser_id": "browser-1",
+                "css_selector": ".container",
+                "find_all": False
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert result_data["data"]["count"] == 1
+            assert result_data["data"]["selector_type"] == "css"
+            mock_tab.query.assert_awaited_once_with(".container")
+
+    @pytest.mark.asyncio
+    async def test_query_xpath(self):
+        """Test query tool with XPath."""
+        with patch('pydoll_mcp.tools.element_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_tab = AsyncMock()
+            mock_element = Mock()
+            mock_element.tag_name = "button"
+            mock_element.text = "Submit"
+            mock_element.id = "submit-btn"
+            mock_element.class_name = None
+            mock_element.name = None
+            mock_element.type = None
+            mock_element.href = None
+
+            mock_tab.query = AsyncMock(return_value=mock_element)
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+
+            result = await handle_query({
+                "browser_id": "browser-1",
+                "xpath": "//button[@id='submit-btn']",
+                "find_all": False
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert result_data["data"]["selector_type"] == "xpath"
+            mock_tab.query.assert_awaited_once_with("//button[@id='submit-btn']")
+
+    @pytest.mark.asyncio
+    async def test_press_key_single_key(self):
+        """Test press_key with a single key."""
+        with patch('pydoll_mcp.tools.element_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_tab = AsyncMock()
+            mock_keyboard = AsyncMock()
+            mock_tab.keyboard = mock_keyboard
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+
+            result = await handle_press_key({
+                "browser_id": "browser-1",
+                "key": "Enter"
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert result_data["data"]["key"] == "Enter"
+            mock_keyboard.press.assert_awaited_once_with("Enter")
+
+    @pytest.mark.asyncio
+    async def test_press_key_combination(self):
+        """Test press_key with key combination."""
+        with patch('pydoll_mcp.tools.element_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_tab = AsyncMock()
+            mock_keyboard = AsyncMock()
+            mock_tab.keyboard = mock_keyboard
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+
+            result = await handle_press_key({
+                "browser_id": "browser-1",
+                "key": "Control+c"
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            # Verify keyboard API was used
+            assert mock_keyboard.down.called or mock_keyboard.press.called
+
+    @pytest.mark.asyncio
+    async def test_press_key_with_element_focus(self):
+        """Test press_key with element selector to focus first."""
+        with patch('pydoll_mcp.tools.element_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_tab = AsyncMock()
+            mock_element = AsyncMock()
+            mock_keyboard = AsyncMock()
+            mock_tab.keyboard = mock_keyboard
+            mock_tab.query = AsyncMock(return_value=mock_element)
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+
+            result = await handle_press_key({
+                "browser_id": "browser-1",
+                "key": "Enter",
+                "element_selector": {"css_selector": "input"}
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert result_data["data"]["element_focused"] is True
+            mock_element.click.assert_awaited_once()
+
+
+class TestNavigationEnhancements:
+    """Test navigation enhancements."""
+
+    @pytest.mark.asyncio
+    async def test_scroll_down(self):
+        """Test scroll tool with down direction."""
+        with patch('pydoll_mcp.tools.navigation_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_tab = AsyncMock()
+
+            mock_tab.execute_script = AsyncMock(return_value={
+                'result': {
+                    'result': {
+                        'value': {'x': 0, 'y': 500}
+                    }
+                }
+            })
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+
+            result = await handle_scroll({
+                "browser_id": "browser-1",
+                "direction": "down",
+                "amount": 500
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert result_data["data"]["direction"] == "down"
+            assert result_data["data"]["amount"] == 500
+            mock_tab.execute_script.assert_awaited()
+
+    @pytest.mark.asyncio
+    async def test_scroll_to_element(self):
+        """Test scroll tool with to_element direction."""
+        with patch('pydoll_mcp.tools.navigation_tools.get_browser_manager') as mock_manager, \
+             patch('pydoll_mcp.tools.element_tools.handle_find_element') as mock_find:
+            mock_browser_manager = AsyncMock()
+            mock_tab = AsyncMock()
+            mock_element = AsyncMock()
+
+            # Mock find_element result
+            from pydoll_mcp.models import OperationResult
+            find_result = OperationResult(
+                success=True,
+                data={"elements": [{"id": "target", "tag_name": "div"}]}
+            )
+            mock_find.return_value = [TextContent(type="text", text=find_result.json())]
+
+            mock_tab.query = AsyncMock(return_value=mock_element)
+            mock_tab.execute_script = AsyncMock(return_value={
+                'result': {
+                    'result': {
+                        'value': {'x': 0, 'y': 1000}
+                    }
+                }
+            })
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+
+            result = await handle_scroll({
+                "browser_id": "browser-1",
+                "direction": "to_element",
+                "element_selector": {"css_selector": "#target"}
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert result_data["data"]["direction"] == "to_element"
+            mock_element.scroll_into_view.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_scroll_to_position(self):
+        """Test scroll tool with to_position direction."""
+        with patch('pydoll_mcp.tools.navigation_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_tab = AsyncMock()
+
+            mock_tab.execute_script = AsyncMock(return_value={
+                'result': {
+                    'result': {
+                        'value': {'x': 100, 'y': 200}
+                    }
+                }
+            })
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+
+            result = await handle_scroll({
+                "browser_id": "browser-1",
+                "direction": "to_position",
+                "x": 100,
+                "y": 200
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert result_data["data"]["direction"] == "to_position"
+            mock_tab.execute_script.assert_awaited()
+
+    @pytest.mark.asyncio
+    async def test_get_frame_css_selector(self):
+        """Test get_frame tool with CSS selector."""
+        with patch('pydoll_mcp.tools.navigation_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_tab = AsyncMock()
+
+            # Mock execute_script - first call finds frame element, second call gets frame info
+            frame_element_result = {
+                'result': {
+                    'result': {
+                        'value': {'tagName': 'IFRAME'}  # Frame element found
+                    }
+                }
+            }
+            frame_info_result = {
+                'result': {
+                    'result': {
+                        'value': {
+                            'tagName': 'IFRAME',
+                            'id': 'frame-1',
+                            'name': 'test-frame',
+                            'src': 'https://example.com/frame.html',
+                            'hasContentWindow': True
+                        }
+                    }
+                }
+            }
+            # execute_script is called twice - once to find frame, once to get info
+            mock_tab.execute_script = AsyncMock(side_effect=[frame_element_result, frame_info_result])
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+
+            result = await handle_get_frame({
+                "browser_id": "browser-1",
+                "frame_selector": "#frame-1",
+                "selector_type": "css"
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            # Frame info structure should have the frame details
+            frame_info = result_data["data"]["frame"]
+            # Check that frame info contains expected keys
+            assert "tagName" in frame_info or "id" in frame_info or "name" in frame_info
+            if "id" in frame_info:
+                assert frame_info["id"] == "frame-1"
+
+    @pytest.mark.asyncio
+    async def test_get_frame_with_pydoll_api(self):
+        """Test get_frame tool with PyDoll API if available."""
+        with patch('pydoll_mcp.tools.navigation_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_tab = AsyncMock()
+
+            # Create a proper mock frame object with serializable attributes
+            class MockFrame:
+                def __init__(self):
+                    self.frame_id = "frame-1"
+                    self.id = "frame-1"
+                    self.url = "https://example.com/frame.html"
+                    self.name = "test-frame"
+
+            mock_frame = MockFrame()
+            mock_tab.get_frame = AsyncMock(return_value=mock_frame)
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+
+            result = await handle_get_frame({
+                "browser_id": "browser-1",
+                "frame_selector": "#frame-1",
+                "selector_type": "css"
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert result_data["data"]["frame"]["frame_id"] == "frame-1"
+            mock_tab.get_frame.assert_awaited_once_with("#frame-1")
+
+
+class TestBrowserContextManagement:
+    """Test browser context management tools."""
+
+    @pytest.mark.asyncio
+    async def test_create_browser_context(self):
+        """Test create_browser_context tool."""
+        with patch('pydoll_mcp.tools.browser_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_browser_instance = AsyncMock()
+            mock_browser = AsyncMock()
+            mock_context = Mock()
+            mock_context.id = "context-1"
+
+            mock_browser_instance.browser = mock_browser
+            mock_browser.create_browser_context = AsyncMock(return_value=mock_context)
+            mock_browser_instance.contexts = {}
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_browser = AsyncMock(return_value=mock_browser_instance)
+
+            result = await handle_create_browser_context({
+                "browser_id": "browser-1",
+                "context_name": "test-context"
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert result_data["data"]["context_id"] == "context-1"
+            assert "context-1" in mock_browser_instance.contexts
+
+    @pytest.mark.asyncio
+    async def test_list_browser_contexts(self):
+        """Test list_browser_contexts tool."""
+        with patch('pydoll_mcp.tools.browser_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_browser_instance = AsyncMock()
+            mock_browser = AsyncMock()
+
+            # Create proper mock context objects
+            class MockContext:
+                def __init__(self, ctx_id, name):
+                    self.id = ctx_id
+                    self.name = name
+
+            mock_browser_instance.browser = mock_browser
+            mock_browser.get_browser_contexts = AsyncMock(return_value=[
+                MockContext("context-1", "context-1"),
+                MockContext("context-2", "context-2")
+            ])
+            # Also set up contexts dictionary as fallback
+            mock_browser_instance.contexts = {}
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_browser = AsyncMock(return_value=mock_browser_instance)
+
+            result = await handle_list_browser_contexts({
+                "browser_id": "browser-1"
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert result_data["data"]["count"] == 2
+            assert len(result_data["data"]["contexts"]) == 2
+
+    @pytest.mark.asyncio
+    async def test_delete_browser_context(self):
+        """Test delete_browser_context tool."""
+        with patch('pydoll_mcp.tools.browser_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_browser_instance = AsyncMock()
+            mock_browser = AsyncMock()
+
+            mock_browser_instance.browser = mock_browser
+            mock_browser.delete_browser_context = AsyncMock()
+            mock_browser_instance.contexts = {"context-1": {"id": "context-1", "name": "test"}}
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_browser = AsyncMock(return_value=mock_browser_instance)
+
+            result = await handle_delete_browser_context({
+                "browser_id": "browser-1",
+                "context_id": "context-1"
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert "context-1" not in mock_browser_instance.contexts
+            mock_browser.delete_browser_context.assert_awaited_once_with("context-1")
+
+
+class TestPermissionsManagement:
+    """Test permissions management tools."""
+
+    @pytest.mark.asyncio
+    async def test_grant_permissions(self):
+        """Test grant_permissions tool."""
+        with patch('pydoll_mcp.tools.browser_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_browser_instance = AsyncMock()
+            mock_browser = AsyncMock()
+
+            mock_browser_instance.browser = mock_browser
+            mock_browser.grant_permissions = AsyncMock()
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_browser = AsyncMock(return_value=mock_browser_instance)
+
+            result = await handle_grant_permissions({
+                "browser_id": "browser-1",
+                "origin": "https://example.com",
+                "permissions": ["camera", "microphone"]
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert result_data["data"]["permissions"] == ["camera", "microphone"]
+            mock_browser.grant_permissions.assert_awaited_once_with(
+                origin="https://example.com",
+                permissions=["camera", "microphone"]
+            )
+
+    @pytest.mark.asyncio
+    async def test_reset_permissions(self):
+        """Test reset_permissions tool."""
+        with patch('pydoll_mcp.tools.browser_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_browser_instance = AsyncMock()
+            mock_browser = AsyncMock()
+
+            mock_browser_instance.browser = mock_browser
+            mock_browser.reset_permissions = AsyncMock()
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_browser = AsyncMock(return_value=mock_browser_instance)
+
+            result = await handle_reset_permissions({
+                "browser_id": "browser-1",
+                "origin": "https://example.com"
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            mock_browser.reset_permissions.assert_awaited_once_with(origin="https://example.com")
+
+    @pytest.mark.asyncio
+    async def test_reset_all_permissions(self):
+        """Test reset_permissions without origin (reset all)."""
+        with patch('pydoll_mcp.tools.browser_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_browser_instance = AsyncMock()
+            mock_browser = AsyncMock()
+
+            mock_browser_instance.browser = mock_browser
+            mock_browser.reset_permissions = AsyncMock()
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_browser = AsyncMock(return_value=mock_browser_instance)
+
+            result = await handle_reset_permissions({
+                "browser_id": "browser-1"
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            mock_browser.reset_permissions.assert_awaited_once_with()
+
+
+class TestEventSystem:
+    """Test event system control tools."""
+
+    @pytest.mark.asyncio
+    async def test_enable_dom_events(self):
+        """Test enable_dom_events tool."""
+        with patch('pydoll_mcp.tools.network_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_browser_instance = AsyncMock()
+            mock_tab = AsyncMock()
+
+            mock_tab.enable_dom_events = AsyncMock()
+            mock_browser_instance.event_states = {}
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+            mock_browser_manager.get_browser = AsyncMock(return_value=mock_browser_instance)
+
+            result = await handle_enable_dom_events({
+                "browser_id": "browser-1"
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert mock_browser_instance.event_states.get('dom_events') is True
+            mock_tab.enable_dom_events.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_disable_dom_events(self):
+        """Test disable_dom_events tool."""
+        with patch('pydoll_mcp.tools.network_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_browser_instance = AsyncMock()
+            mock_tab = AsyncMock()
+
+            mock_tab.disable_dom_events = AsyncMock()
+            mock_browser_instance.event_states = {}
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+            mock_browser_manager.get_browser = AsyncMock(return_value=mock_browser_instance)
+
+            result = await handle_disable_dom_events({
+                "browser_id": "browser-1"
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert mock_browser_instance.event_states.get('dom_events') is False
+
+    @pytest.mark.asyncio
+    async def test_get_event_status(self):
+        """Test get_event_status tool."""
+        with patch('pydoll_mcp.tools.network_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_browser_instance = AsyncMock()
+            mock_tab = AsyncMock()
+
+            # Set up event status attributes
+            mock_tab.dom_events_enabled = True
+            mock_tab.network_events_enabled = False
+            mock_tab.page_events_enabled = True
+            mock_tab.fetch_events_enabled = None  # Not set, will use fallback
+            mock_tab.runtime_events_enabled = None  # Not set, will use fallback
+
+            # Set up event states in browser instance
+            mock_browser_instance.event_states = {
+                'fetch_events': True,
+                'runtime_events': False
+            }
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback = AsyncMock(return_value=(mock_tab, "tab-1"))
+            mock_browser_manager.get_browser = AsyncMock(return_value=mock_browser_instance)
+
+            result = await handle_get_event_status({
+                "browser_id": "browser-1"
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert "event_status" in result_data["data"]
+            event_status = result_data["data"]["event_status"]
+            assert event_status.get('dom_events') is True
+            assert event_status.get('network_events') is False
+
+    @pytest.mark.asyncio
+    async def test_enable_network_events(self):
+        """Test enable_network_events tool."""
+        with patch('pydoll_mcp.tools.network_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_browser_instance = AsyncMock()
+            mock_tab = AsyncMock()
+
+            mock_tab.enable_network_events = AsyncMock()
+            mock_browser_instance.event_states = {}
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+            mock_browser_manager.get_browser = AsyncMock(return_value=mock_browser_instance)
+
+            result = await handle_enable_network_events({
+                "browser_id": "browser-1"
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert mock_browser_instance.event_states.get('network_events') is True
+
+    @pytest.mark.asyncio
+    async def test_enable_page_events(self):
+        """Test enable_page_events tool."""
+        with patch('pydoll_mcp.tools.network_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_browser_instance = AsyncMock()
+            mock_tab = AsyncMock()
+
+            mock_tab.enable_page_events = AsyncMock()
+            mock_browser_instance.event_states = {}
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+            mock_browser_manager.get_browser = AsyncMock(return_value=mock_browser_instance)
+
+            result = await handle_enable_page_events({
+                "browser_id": "browser-1"
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert mock_browser_instance.event_states.get('page_events') is True
+
+    @pytest.mark.asyncio
+    async def test_enable_fetch_events(self):
+        """Test enable_fetch_events tool."""
+        with patch('pydoll_mcp.tools.network_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_browser_instance = AsyncMock()
+            mock_tab = AsyncMock()
+
+            mock_tab.enable_fetch_events = AsyncMock()
+            mock_browser_instance.event_states = {}
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+            mock_browser_manager.get_browser = AsyncMock(return_value=mock_browser_instance)
+
+            result = await handle_enable_fetch_events({
+                "browser_id": "browser-1"
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert mock_browser_instance.event_states.get('fetch_events') is True
+
+    @pytest.mark.asyncio
+    async def test_enable_runtime_events(self):
+        """Test enable_runtime_events tool."""
+        with patch('pydoll_mcp.tools.network_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_browser_instance = AsyncMock()
+            mock_tab = AsyncMock()
+
+            mock_tab.enable_runtime_events = AsyncMock()
+            mock_browser_instance.event_states = {}
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+            mock_browser_manager.get_browser = AsyncMock(return_value=mock_browser_instance)
+
+            result = await handle_enable_runtime_events({
+                "browser_id": "browser-1"
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert mock_browser_instance.event_states.get('runtime_events') is True
+
+
+class TestRequestInterceptionEnhancements:
+    """Test request interception enhancements."""
+
+    @pytest.mark.asyncio
+    async def test_modify_request(self):
+        """Test modify_request tool."""
+        with patch('pydoll_mcp.tools.network_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_tab = AsyncMock()
+
+            mock_tab.continue_request = AsyncMock()
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+
+            result = await handle_modify_request({
+                "browser_id": "browser-1",
+                "request_id": "req-1",
+                "url": "https://modified.com",
+                "method": "POST",
+                "headers": {"X-Custom": "value"}
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            mock_tab.continue_request.assert_awaited_once_with(
+                request_id="req-1",
+                url="https://modified.com",
+                method="POST",
+                headers={"X-Custom": "value"},
+                post_data=None
+            )
+
+    @pytest.mark.asyncio
+    async def test_fulfill_request(self):
+        """Test fulfill_request tool."""
+        with patch('pydoll_mcp.tools.network_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_tab = AsyncMock()
+
+            mock_tab.fulfill_request = AsyncMock()
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+
+            result = await handle_fulfill_request({
+                "browser_id": "browser-1",
+                "request_id": "req-1",
+                "status": 200,
+                "headers": {"Content-Type": "application/json"},
+                "body": '{"success": true}'
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert result_data["data"]["status"] == 200
+            mock_tab.fulfill_request.assert_awaited_once_with(
+                request_id="req-1",
+                status=200,
+                headers={"Content-Type": "application/json"},
+                body='{"success": true}'
+            )
+
+    @pytest.mark.asyncio
+    async def test_continue_with_auth(self):
+        """Test continue_with_auth tool."""
+        with patch('pydoll_mcp.tools.network_tools.get_browser_manager') as mock_manager:
+            mock_browser_manager = AsyncMock()
+            mock_tab = AsyncMock()
+
+            mock_tab.continue_with_auth = AsyncMock()
+
+            mock_manager.return_value = mock_browser_manager
+            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
+
+            result = await handle_continue_with_auth({
+                "browser_id": "browser-1",
+                "request_id": "req-1",
+                "username": "user",
+                "password": "pass"
+            })
+
+            assert len(result) == 1
+            result_data = json.loads(result[0].text)
+            assert result_data["success"] is True
+            assert result_data["data"]["username"] == "user"
+            mock_tab.continue_with_auth.assert_awaited_once_with(
+                request_id="req-1",
+                username="user",
+                password="pass"
+            )
 

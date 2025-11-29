@@ -26,13 +26,17 @@ class TestToolDefinitions:
 
     def test_tool_counts(self):
         """Test that tool counts match expected values."""
-        assert len(BROWSER_TOOLS) == 13  # Added: bring_tab_to_front, set_download_behavior, set_download_path, enable_file_chooser_interception, disable_file_chooser_interception
-        assert len(NAVIGATION_TOOLS) == 7
-        assert len(ELEMENT_TOOLS) == 4
+        # Browser tools: 13 base + 5 new (create_browser_context, list_browser_contexts, delete_browser_context, grant_permissions, reset_permissions) = 18
+        assert len(BROWSER_TOOLS) == 18
+        # Navigation tools: 7 base + 2 new (scroll, get_frame) = 9
+        assert len(NAVIGATION_TOOLS) == 9
+        # Element tools: 4 base + 3 new (find_or_wait_element, query, press_key) = 7
+        assert len(ELEMENT_TOOLS) == 7
         assert len(SCREENSHOT_TOOLS) == 3
         assert len(SCRIPT_TOOLS) == 3
         assert len(PROTECTION_TOOLS) == 14  # Added: enable_cloudflare_auto_solve, disable_cloudflare_auto_solve
-        assert len(NETWORK_TOOLS) == 11  # Added: get_network_response_body
+        # Network tools: 11 base + 14 new (10 event tools + get_event_status + 3 request interception tools) = 25
+        assert len(NETWORK_TOOLS) == 25
         assert len(FILE_TOOLS) == 8
 
         # Total should match all tools
@@ -73,9 +77,9 @@ class TestToolDefinitions:
         """Test tool category organization."""
         # Match categories defined in __init__.py
         expected_categories = {
-            "browser_management": 13,  # Updated for new tools
-            "navigation_control": 7,
-            "element_interaction": 4,
+            "browser_management": 18,  # Updated for new tools (13 base + 5 new)
+            "navigation_control": 9,  # Updated (7 base + 2 new)
+            "element_interaction": 7,  # Updated (4 base + 3 new)
             "page_interaction": 4,  # Updated: handle_dialog, handle_alert, save_page_as_pdf, save_pdf
             "screenshot_media": 3,
             "script_execution": 3,
@@ -109,7 +113,15 @@ class TestBrowserTools:
         ]
 
         actual_names = [tool.name for tool in BROWSER_TOOLS]
-        assert set(actual_names) == set(expected_names)
+        # Check that all expected names are present (but there may be more)
+        for name in expected_names:
+            assert name in actual_names
+        # Check for new tools
+        assert "create_browser_context" in actual_names
+        assert "list_browser_contexts" in actual_names
+        assert "delete_browser_context" in actual_names
+        assert "grant_permissions" in actual_names
+        assert "reset_permissions" in actual_names
 
     def test_create_browser_schema(self):
         """Test create_browser tool schema."""
@@ -134,7 +146,7 @@ class TestNavigationTools:
 
     def test_navigation_tool_count(self):
         """Test navigation tool count includes new tools."""
-        assert len(NAVIGATION_TOOLS) == 7
+        assert len(NAVIGATION_TOOLS) == 9  # Added: scroll, get_frame
 
     def test_navigate_to_schema(self):
         """Test navigate_to tool schema."""
@@ -150,17 +162,26 @@ class TestNavigationTools:
         # Check optional fields
         assert "timeout" in properties
 
+    def test_new_navigation_tools(self):
+        """Test that new navigation tools exist."""
+        tool_names = [t.name for t in NAVIGATION_TOOLS]
+        assert "scroll" in tool_names
+        assert "get_frame" in tool_names
+
 
 class TestElementTools:
     """Test element interaction tools."""
 
     def test_element_tool_count(self):
         """Test element tool count includes new tools."""
-        assert len(ELEMENT_TOOLS) == 4
+        assert len(ELEMENT_TOOLS) == 7  # Added: find_or_wait_element, query, press_key
 
-        # Check for new tool
+        # Check for new tools
         tool_names = [t.name for t in ELEMENT_TOOLS]
         assert "get_parent_element" in tool_names
+        assert "find_or_wait_element" in tool_names
+        assert "query" in tool_names
+        assert "press_key" in tool_names
 
     def test_find_element_schema(self):
         """Test find_element tool schema."""
@@ -222,13 +243,32 @@ class TestNetworkTools:
 
     def test_network_tool_count(self):
         """Test network tool count."""
-        assert len(NETWORK_TOOLS) == 11  # Added: get_network_response_body
+        assert len(NETWORK_TOOLS) == 25  # Added: 10 event tools + get_event_status + 3 request interception tools  # Added: get_network_response_body
 
     def test_request_interception(self):
         """Test request interception tools."""
         tool_names = [t.name for t in NETWORK_TOOLS]
 
         assert "intercept_network_requests" in tool_names
+        assert "modify_request" in tool_names
+        assert "fulfill_request" in tool_names
+        assert "continue_with_auth" in tool_names
+
+    def test_event_control_tools(self):
+        """Test event control tools."""
+        tool_names = [t.name for t in NETWORK_TOOLS]
+
+        assert "enable_dom_events" in tool_names
+        assert "disable_dom_events" in tool_names
+        assert "enable_network_events" in tool_names
+        assert "disable_network_events" in tool_names
+        assert "enable_page_events" in tool_names
+        assert "disable_page_events" in tool_names
+        assert "enable_fetch_events" in tool_names
+        assert "disable_fetch_events" in tool_names
+        assert "enable_runtime_events" in tool_names
+        assert "disable_runtime_events" in tool_names
+        assert "get_event_status" in tool_names
 
 
 class TestFileTools:

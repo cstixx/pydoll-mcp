@@ -9,6 +9,7 @@ This module provides MCP tools for browser lifecycle management including:
 
 import json
 import logging
+import time
 from typing import Any, Dict, List, Sequence
 
 from mcp.types import Tool, TextContent
@@ -314,6 +315,100 @@ BROWSER_TOOLS = [
                 "tab_id": {
                     "type": "string",
                     "description": "Optional tab ID, uses active tab if not specified"
+                }
+            },
+            "required": ["browser_id"]
+        }
+    ),
+    Tool(
+        name="create_browser_context",
+        description="Create a new browser context (isolated profile) for multi-profile automation",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "context_name": {
+                    "type": "string",
+                    "description": "Optional name for the context"
+                }
+            },
+            "required": ["browser_id"]
+        }
+    ),
+    Tool(
+        name="list_browser_contexts",
+        description="List all browser contexts for a browser instance",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                }
+            },
+            "required": ["browser_id"]
+        }
+    ),
+    Tool(
+        name="delete_browser_context",
+        description="Delete a browser context",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "context_id": {
+                    "type": "string",
+                    "description": "Context ID to delete"
+                }
+            },
+            "required": ["browser_id", "context_id"]
+        }
+    ),
+    Tool(
+        name="grant_permissions",
+        description="Grant browser permissions (camera, microphone, geolocation, etc.) to a specific origin",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "origin": {
+                    "type": "string",
+                    "description": "URL origin to grant permissions for"
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["camera", "microphone", "geolocation", "notifications", "persistent-storage", "push", "midi", "midi-sysex", "background-sync", "ambient-light-sensor", "accelerometer", "gyroscope", "magnetometer", "accessibility-events", "clipboard-read", "clipboard-write", "payment-handler", "idle-detection", "periodic-background-sync"]
+                    },
+                    "description": "List of permissions to grant"
+                }
+            },
+            "required": ["browser_id", "origin", "permissions"]
+        }
+    ),
+    Tool(
+        name="reset_permissions",
+        description="Reset browser permissions for a specific origin or all origins",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "origin": {
+                    "type": "string",
+                    "description": "Optional URL origin to reset permissions for. If not provided, resets all permissions"
                 }
             },
             "required": ["browser_id"]
@@ -1003,6 +1098,398 @@ async def handle_disable_file_chooser_interception(arguments: Dict[str, Any]) ->
         return [TextContent(type="text", text=result.json())]
 
 
+async def handle_create_browser_context(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle create browser context request."""
+    try:
+        browser_id = arguments.get("browser_id")
+        context_name = arguments.get("context_name")
+
+        if not browser_id:
+            result = OperationResult(
+                success=False,
+                message="Browser ID is required",
+                error="Missing browser_id parameter"
+            )
+            return [TextContent(type="text", text=result.json())]
+
+        browser_manager = get_browser_manager()
+        browser_instance = await browser_manager.get_browser(browser_id)
+
+        if not browser_instance:
+            result = OperationResult(
+                success=False,
+                message="Browser not found",
+                error=f"Browser {browser_id} not found"
+            )
+            return [TextContent(type="text", text=result.json())]
+
+        # Check if PyDoll browser has create_browser_context method
+        if hasattr(browser_instance.browser, 'create_browser_context'):
+            try:
+                context = await browser_instance.browser.create_browser_context()
+                context_id = getattr(context, 'id', str(context))
+
+                # Store context in browser instance
+                if not hasattr(browser_instance, 'contexts'):
+                    browser_instance.contexts = {}
+                browser_instance.contexts[context_id] = {
+                    "id": context_id,
+                    "name": context_name,
+                    "created_at": time.time()
+                }
+
+                result = OperationResult(
+                    success=True,
+                    message="Browser context created successfully",
+                    data={
+                        "browser_id": browser_id,
+                        "context_id": context_id,
+                        "context_name": context_name
+                    }
+                )
+                logger.info(f"Browser context {context_id} created for browser {browser_id}")
+                return [TextContent(type="text", text=result.json())]
+            except Exception as e:
+                logger.warning(f"PyDoll create_browser_context failed: {e}")
+                result = OperationResult(
+                    success=False,
+                    error=str(e),
+                    message="Failed to create browser context - PyDoll API may not support this feature"
+                )
+                return [TextContent(type="text", text=result.json())]
+        else:
+            result = OperationResult(
+                success=False,
+                error="Browser context creation not supported",
+                message="PyDoll browser does not support create_browser_context method"
+            )
+            return [TextContent(type="text", text=result.json())]
+
+    except Exception as e:
+        logger.error(f"Error creating browser context: {e}")
+        result = OperationResult(
+            success=False,
+            message="Failed to create browser context",
+            error=str(e)
+        )
+        return [TextContent(type="text", text=result.json())]
+
+
+async def handle_list_browser_contexts(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle list browser contexts request."""
+    try:
+        browser_id = arguments.get("browser_id")
+
+        if not browser_id:
+            result = OperationResult(
+                success=False,
+                message="Browser ID is required",
+                error="Missing browser_id parameter"
+            )
+            return [TextContent(type="text", text=result.json())]
+
+        browser_manager = get_browser_manager()
+        browser_instance = await browser_manager.get_browser(browser_id)
+
+        if not browser_instance:
+            result = OperationResult(
+                success=False,
+                message="Browser not found",
+                error=f"Browser {browser_id} not found"
+            )
+            return [TextContent(type="text", text=result.json())]
+
+        # Check if PyDoll browser has get_browser_contexts method
+        if hasattr(browser_instance.browser, 'get_browser_contexts'):
+            try:
+                contexts = await browser_instance.browser.get_browser_contexts()
+                contexts_list = []
+
+                if isinstance(contexts, list):
+                    for ctx in contexts:
+                        context_id = getattr(ctx, 'id', str(ctx))
+                        contexts_list.append({
+                            "id": context_id,
+                            "name": getattr(ctx, 'name', None)
+                        })
+                elif isinstance(contexts, dict):
+                    contexts_list = [{"id": k, "name": v} for k, v in contexts.items()]
+
+                result = OperationResult(
+                    success=True,
+                    message=f"Found {len(contexts_list)} browser context(s)",
+                    data={
+                        "browser_id": browser_id,
+                        "contexts": contexts_list,
+                        "count": len(contexts_list)
+                    }
+                )
+                return [TextContent(type="text", text=result.json())]
+            except Exception as e:
+                logger.warning(f"PyDoll get_browser_contexts failed: {e}")
+
+        # Fallback: Use stored contexts from browser instance
+        if hasattr(browser_instance, 'contexts') and browser_instance.contexts:
+            contexts_list = [
+                {"id": ctx_id, "name": ctx_info.get("name")}
+                for ctx_id, ctx_info in browser_instance.contexts.items()
+            ]
+            result = OperationResult(
+                success=True,
+                message=f"Found {len(contexts_list)} browser context(s)",
+                data={
+                    "browser_id": browser_id,
+                    "contexts": contexts_list,
+                    "count": len(contexts_list),
+                    "note": "Using stored contexts (PyDoll API may not be available)"
+                }
+            )
+            return [TextContent(type="text", text=result.json())]
+        else:
+            result = OperationResult(
+                success=True,
+                message="No browser contexts found",
+                data={
+                    "browser_id": browser_id,
+                    "contexts": [],
+                    "count": 0
+                }
+            )
+            return [TextContent(type="text", text=result.json())]
+
+    except Exception as e:
+        logger.error(f"Error listing browser contexts: {e}")
+        result = OperationResult(
+            success=False,
+            message="Failed to list browser contexts",
+            error=str(e)
+        )
+        return [TextContent(type="text", text=result.json())]
+
+
+async def handle_delete_browser_context(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle delete browser context request."""
+    try:
+        browser_id = arguments.get("browser_id")
+        context_id = arguments.get("context_id")
+
+        if not browser_id or not context_id:
+            result = OperationResult(
+                success=False,
+                message="Browser ID and Context ID are required",
+                error="Missing required parameters"
+            )
+            return [TextContent(type="text", text=result.json())]
+
+        browser_manager = get_browser_manager()
+        browser_instance = await browser_manager.get_browser(browser_id)
+
+        if not browser_instance:
+            result = OperationResult(
+                success=False,
+                message="Browser not found",
+                error=f"Browser {browser_id} not found"
+            )
+            return [TextContent(type="text", text=result.json())]
+
+        # Check if PyDoll browser has delete_browser_context method
+        if hasattr(browser_instance.browser, 'delete_browser_context'):
+            try:
+                await browser_instance.browser.delete_browser_context(context_id)
+
+                # Remove from stored contexts
+                if hasattr(browser_instance, 'contexts') and context_id in browser_instance.contexts:
+                    del browser_instance.contexts[context_id]
+
+                result = OperationResult(
+                    success=True,
+                    message="Browser context deleted successfully",
+                    data={
+                        "browser_id": browser_id,
+                        "context_id": context_id
+                    }
+                )
+                logger.info(f"Browser context {context_id} deleted from browser {browser_id}")
+                return [TextContent(type="text", text=result.json())]
+            except Exception as e:
+                logger.warning(f"PyDoll delete_browser_context failed: {e}")
+                result = OperationResult(
+                    success=False,
+                    error=str(e),
+                    message="Failed to delete browser context"
+                )
+                return [TextContent(type="text", text=result.json())]
+        else:
+            # Fallback: Just remove from stored contexts
+            if hasattr(browser_instance, 'contexts') and context_id in browser_instance.contexts:
+                del browser_instance.contexts[context_id]
+                result = OperationResult(
+                    success=True,
+                    message="Browser context removed from tracking",
+                    data={
+                        "browser_id": browser_id,
+                        "context_id": context_id,
+                        "note": "Context removed from tracking (PyDoll API may not support deletion)"
+                    }
+                )
+                return [TextContent(type="text", text=result.json())]
+            else:
+                result = OperationResult(
+                    success=False,
+                    error="Context not found",
+                    message=f"Context {context_id} not found"
+                )
+                return [TextContent(type="text", text=result.json())]
+
+    except Exception as e:
+        logger.error(f"Error deleting browser context: {e}")
+        result = OperationResult(
+            success=False,
+            message="Failed to delete browser context",
+            error=str(e)
+        )
+        return [TextContent(type="text", text=result.json())]
+
+
+async def handle_grant_permissions(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle grant permissions request."""
+    try:
+        browser_id = arguments.get("browser_id")
+        origin = arguments.get("origin")
+        permissions = arguments.get("permissions", [])
+
+        if not browser_id or not origin or not permissions:
+            result = OperationResult(
+                success=False,
+                message="Browser ID, origin, and permissions are required",
+                error="Missing required parameters"
+            )
+            return [TextContent(type="text", text=result.json())]
+
+        browser_manager = get_browser_manager()
+        browser_instance = await browser_manager.get_browser(browser_id)
+
+        if not browser_instance:
+            result = OperationResult(
+                success=False,
+                message="Browser not found",
+                error=f"Browser {browser_id} not found"
+            )
+            return [TextContent(type="text", text=result.json())]
+
+        # Check if PyDoll browser has grant_permissions method
+        if hasattr(browser_instance.browser, 'grant_permissions'):
+            try:
+                await browser_instance.browser.grant_permissions(origin=origin, permissions=permissions)
+
+                result = OperationResult(
+                    success=True,
+                    message=f"Permissions granted to {origin}",
+                    data={
+                        "browser_id": browser_id,
+                        "origin": origin,
+                        "permissions": permissions
+                    }
+                )
+                logger.info(f"Permissions {permissions} granted to {origin} for browser {browser_id}")
+                return [TextContent(type="text", text=result.json())]
+            except Exception as e:
+                logger.warning(f"PyDoll grant_permissions failed: {e}")
+                result = OperationResult(
+                    success=False,
+                    error=str(e),
+                    message="Failed to grant permissions - PyDoll API may not support this feature"
+                )
+                return [TextContent(type="text", text=result.json())]
+        else:
+            result = OperationResult(
+                success=False,
+                error="Permission management not supported",
+                message="PyDoll browser does not support grant_permissions method"
+            )
+            return [TextContent(type="text", text=result.json())]
+
+    except Exception as e:
+        logger.error(f"Error granting permissions: {e}")
+        result = OperationResult(
+            success=False,
+            message="Failed to grant permissions",
+            error=str(e)
+        )
+        return [TextContent(type="text", text=result.json())]
+
+
+async def handle_reset_permissions(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle reset permissions request."""
+    try:
+        browser_id = arguments.get("browser_id")
+        origin = arguments.get("origin")
+
+        if not browser_id:
+            result = OperationResult(
+                success=False,
+                message="Browser ID is required",
+                error="Missing browser_id parameter"
+            )
+            return [TextContent(type="text", text=result.json())]
+
+        browser_manager = get_browser_manager()
+        browser_instance = await browser_manager.get_browser(browser_id)
+
+        if not browser_instance:
+            result = OperationResult(
+                success=False,
+                message="Browser not found",
+                error=f"Browser {browser_id} not found"
+            )
+            return [TextContent(type="text", text=result.json())]
+
+        # Check if PyDoll browser has reset_permissions method
+        if hasattr(browser_instance.browser, 'reset_permissions'):
+            try:
+                if origin:
+                    await browser_instance.browser.reset_permissions(origin=origin)
+                    message = f"Permissions reset for {origin}"
+                else:
+                    await browser_instance.browser.reset_permissions()
+                    message = "All permissions reset"
+
+                result = OperationResult(
+                    success=True,
+                    message=message,
+                    data={
+                        "browser_id": browser_id,
+                        "origin": origin
+                    }
+                )
+                logger.info(f"Permissions reset for {origin or 'all origins'} in browser {browser_id}")
+                return [TextContent(type="text", text=result.json())]
+            except Exception as e:
+                logger.warning(f"PyDoll reset_permissions failed: {e}")
+                result = OperationResult(
+                    success=False,
+                    error=str(e),
+                    message="Failed to reset permissions - PyDoll API may not support this feature"
+                )
+                return [TextContent(type="text", text=result.json())]
+        else:
+            result = OperationResult(
+                success=False,
+                error="Permission management not supported",
+                message="PyDoll browser does not support reset_permissions method"
+            )
+            return [TextContent(type="text", text=result.json())]
+
+    except Exception as e:
+        logger.error(f"Error resetting permissions: {e}")
+        result = OperationResult(
+            success=False,
+            message="Failed to reset permissions",
+            error=str(e)
+        )
+        return [TextContent(type="text", text=result.json())]
+
+
 # Browser Tool Handlers Dictionary
 BROWSER_TOOL_HANDLERS = {
     "start_browser": handle_start_browser,
@@ -1018,4 +1505,9 @@ BROWSER_TOOL_HANDLERS = {
     "set_download_path": handle_set_download_path,
     "enable_file_chooser_interception": handle_enable_file_chooser_interception,
     "disable_file_chooser_interception": handle_disable_file_chooser_interception,
+    "create_browser_context": handle_create_browser_context,
+    "list_browser_contexts": handle_list_browser_contexts,
+    "delete_browser_context": handle_delete_browser_context,
+    "grant_permissions": handle_grant_permissions,
+    "reset_permissions": handle_reset_permissions,
 }

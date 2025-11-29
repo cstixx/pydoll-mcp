@@ -30,7 +30,63 @@
   </a>
 </p>
 
-## 📢 Latest Updates (v1.5.17 - 2025-11-29)
+## 📢 Latest Updates (v1.5.18 - 2025-11-29)
+
+### 🚀 Complete PyDoll 2.12.4+ Feature Integration
+
+#### ✨ Major New Features & Tools
+
+**Element Finding & Interaction:**
+- **NEW**: `find_or_wait_element` - Find elements with automatic polling and timeout support
+- **NEW**: `query` - Advanced CSS/XPath querying using PyDoll's query() method
+- **NEW**: `press_key` - Keyboard shortcuts and key combinations (Ctrl+C, Enter, Tab, etc.)
+- **Enhanced**: `type_text` - Now uses PyDoll's keyboard API for better typing control
+
+**Navigation & Page Control:**
+- **NEW**: `scroll` - Programmatic scrolling with multiple modes (up, down, left, right, to_element, to_position, to_top, to_bottom)
+- **NEW**: `get_frame` - Access iframe/frame content for embedded content automation
+
+**Browser Context & Permissions:**
+- **NEW**: `create_browser_context` - Create isolated browser contexts (profiles) for session isolation
+- **NEW**: `list_browser_contexts` - List all active browser contexts
+- **NEW**: `delete_browser_context` - Delete browser contexts and associated data
+- **NEW**: `grant_permissions` - Grant browser permissions (camera, microphone, geolocation, etc.)
+- **NEW**: `reset_permissions` - Reset browser permissions for contexts or origins
+
+**Event System Control:**
+- **NEW**: `enable_dom_events` / `disable_dom_events` - Control DOM event monitoring
+- **NEW**: `enable_network_events` / `disable_network_events` - Control network event monitoring
+- **NEW**: `enable_page_events` / `disable_page_events` - Control page event monitoring
+- **NEW**: `enable_fetch_events` / `disable_fetch_events` - Control fetch event monitoring
+- **NEW**: `enable_runtime_events` / `disable_runtime_events` - Control runtime event monitoring
+- **NEW**: `get_event_status` - Check event monitoring status for all event types
+
+**Request Interception Enhancements:**
+- **NEW**: `modify_request` - Modify intercepted requests (URL, method, headers, post data)
+- **NEW**: `fulfill_request` - Mock responses with custom status, headers, and body
+- **NEW**: `continue_with_auth` - Handle HTTP authentication in intercepted requests
+- **Enhanced**: `intercept_network_requests` - Now uses PyDoll's native request interception APIs
+
+#### 📊 Updated Tool Counts
+- **Element Tools**: 4 → 7 tools (+3: find_or_wait_element, query, press_key)
+- **Navigation Tools**: 7 → 9 tools (+2: scroll, get_frame)
+- **Browser Management**: 13 → 18 tools (+5: context and permissions management)
+- **Network Tools**: 11 → 25 tools (+14: event control and request interception)
+- **Total**: 84 → 93 tools (+9 new tools)
+
+#### 🎯 Technical Improvements
+- **Enhanced**: BrowserInstance now tracks browser contexts and event states
+- **Improved**: All new tools use PyDoll's native APIs with proper fallbacks
+- **Added**: Comprehensive test coverage (30+ new tests) for all new features
+- **Better**: Error handling and logging for all new functionality
+- **Fixed**: All tests passing (178 passed, 2 skipped)
+
+> **🚀 Major Update**: This version completes the PyDoll 2.12.4+ feature integration with advanced element finding, browser context management, event control, and request interception. Upgrade now:
+> ```bash
+> pip install --upgrade pydoll-mcp
+> ```
+
+## 📢 Previous Updates (v1.5.17 - 2025-11-29)
 
 ### 🚀 PyDoll 2.12.4+ Feature Integration
 

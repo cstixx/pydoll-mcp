@@ -16,6 +16,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Advanced form recognition
 - GUI setup tool
 
+## [1.5.18] - 2025-11-29
+
+### Added
+- **Element Finding with Waiting**: New `find_or_wait_element` tool with automatic polling and timeout support
+- **Advanced Query Tool**: New `query` tool for complex CSS/XPath queries using PyDoll's query() method
+- **Keyboard API Support**: New `press_key` tool for keyboard shortcuts and key combinations (Ctrl+C, Enter, Tab, etc.)
+- **Page Scrolling**: New `scroll` tool with multiple scroll modes (up, down, left, right, to_element, to_position, to_top, to_bottom)
+- **Frame Management**: New `get_frame` tool for accessing iframe/frame content
+- **Browser Context Management**: New `create_browser_context`, `list_browser_contexts`, and `delete_browser_context` tools for multi-profile automation
+- **Permissions Management**: New `grant_permissions` and `reset_permissions` tools for browser permission control
+- **Event System Control**: New event control tools:
+  - `enable_dom_events` / `disable_dom_events`
+  - `enable_network_events` / `disable_network_events`
+  - `enable_page_events` / `disable_page_events`
+  - `enable_fetch_events` / `disable_fetch_events`
+  - `enable_runtime_events` / `disable_runtime_events`
+  - `get_event_status` for checking event monitoring status
+- **Request Interception Enhancements**: New tools for advanced request handling:
+  - `modify_request` for modifying intercepted requests (URL, method, headers, post data)
+  - `fulfill_request` for mocking responses with custom status, headers, and body
+  - `continue_with_auth` for HTTP authentication in intercepted requests
+- **Comprehensive Test Coverage**: Added 30+ new tests covering all new features
+
+### Enhanced
+- **Type Text**: Enhanced `type_text` tool to use PyDoll's keyboard API when available for better typing control
+- **Request Interception**: Enhanced `intercept_network_requests` to use PyDoll's native request interception APIs
+- **Browser Manager**: Updated `BrowserInstance` to track browser contexts and event states
+- **Event Status Handler**: Fixed serialization issues in `get_event_status` handler
+
+### Fixed
+- **Test Suite**: Fixed all test failures and updated tool count assertions
+- **Frame Access**: Improved frame element finding and information retrieval
+- **Context Management**: Fixed browser context listing and management
+- **Event Status**: Fixed JSON serialization in event status retrieval
+
+### Technical Details
+- **Tool Count Updates**:
+  - Element Tools: 4 → 7 tools (+3: find_or_wait_element, query, press_key)
+  - Navigation Tools: 7 → 9 tools (+2: scroll, get_frame)
+  - Browser Management: 13 → 18 tools (+5: context and permissions management)
+  - Network Tools: 11 → 25 tools (+14: event control and request interception)
+  - Total: 84 → 93 tools (+9 new tools)
+- **Test Results**: 178 tests passed, 2 skipped, 0 failures
+- **API Integration**: All new tools use PyDoll's native APIs with proper fallbacks
+- **Backward Compatibility**: Full backward compatibility maintained with existing tools
+
 ## [1.5.17] - 2025-11-29
 
 ### Added

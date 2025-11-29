@@ -86,6 +86,16 @@ TOOL_CATEGORIES = {
         "description": "Advanced automation and protection bypass",
         "tools": [tool.name for tool in ADVANCED_TOOLS],
         "count": len(ADVANCED_TOOLS)
+    },
+    "network_monitoring": {
+        "description": "Network monitoring, interception, and event control",
+        "tools": [tool.name for tool in NETWORK_TOOLS],
+        "count": len(NETWORK_TOOLS)
+    },
+    "file_operations": {
+        "description": "File upload, download, and management",
+        "tools": [tool.name for tool in FILE_TOOLS],
+        "count": len(FILE_TOOLS)
     }
 }
 
