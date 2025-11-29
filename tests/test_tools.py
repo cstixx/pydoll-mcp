@@ -65,9 +65,9 @@ class TestToolDefinitions:
             assert schema["type"] == "object"
             assert "properties" in schema
 
-            # Tool names should be unique - Skipping strictly unique check as implementation allows duplicates currently
-            # tool_names = [t.name for t in ALL_TOOLS]
-            # assert len(tool_names) == len(set(tool_names))
+            # Tool names should be unique
+            tool_names = [t.name for t in ALL_TOOLS]
+            assert len(tool_names) == len(set(tool_names))
 
     def test_tool_categories(self):
         """Test tool category organization."""
