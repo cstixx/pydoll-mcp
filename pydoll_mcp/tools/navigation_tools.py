@@ -241,7 +241,7 @@ async def handle_navigate_to(arguments: Dict[str, Any]) -> Sequence[TextContent]
         # Get final URL and title using PyDoll properties
         try:
             # PyDoll uses 'current_url' property, not get_url()
-            final_url = tab.current_url
+            final_url = await tab.current_url
             
             # Get title by executing JavaScript
             title_result = await tab.execute_script('document.title')

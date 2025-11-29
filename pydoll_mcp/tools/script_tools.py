@@ -167,6 +167,14 @@ async def handle_execute_javascript(arguments: Dict[str, Any]) -> Sequence[TextC
             # PyDoll uses execute_script, not evaluate
             result = await tab.execute_script(script)
             
+            # Check for exceptionDetails (CDP standard)
+            if result and 'result' in result and 'exceptionDetails' in result['result']:
+                exception_details = result['result']['exceptionDetails']
+                error_msg = exception_details.get('text', 'Script execution error')
+                if 'exception' in exception_details and 'description' in exception_details['exception']:
+                    error_msg = exception_details['exception']['description']
+                raise Exception(error_msg)
+
             # Handle PyDoll's nested result structure
             if result and 'result' in result and 'result' in result['result']:
                 result_value = result['result']['result'].get('value')
