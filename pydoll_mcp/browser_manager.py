@@ -455,7 +455,12 @@ class BrowserManager:
                 pass
         
         # Cache the options
-        self._options_cache[cache_key] = options
+        # Note: We must NOT cache mutable ChromiumOptions objects because they are modified in-place
+        # by the Chrome class (e.g., adding default arguments).
+        # We can cache the configuration logic if needed, but for now, disabling cache to fix bugs.
+        # self._options_cache[cache_key] = options
+
+
         
         return options
     
