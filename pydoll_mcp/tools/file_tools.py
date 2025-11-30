@@ -15,16 +15,18 @@ from datetime import datetime
 
 from mcp.types import Tool, TextContent
 
-from ..browser_manager import get_browser_manager
+from ..core import get_browser_manager
 from ..models import OperationResult
 
 logger = logging.getLogger(__name__)
 
 # File Tools Definition
 
+# Note: upload_file, download_file, manage_downloads have been removed
+# Use unified tool: manage_file instead
 FILE_TOOLS = [
     Tool(
-        name="upload_file",
+        name="extract_data",
         description="Upload a file to a web form",
         inputSchema={
             "type": "object",
@@ -55,65 +57,7 @@ FILE_TOOLS = [
             "required": ["browser_id", "file_path", "input_selector"]
         }
     ),
-    Tool(
-        name="download_file",
-        description="Download a file from a URL or trigger a download using PyDoll's expect_download API",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "tab_id": {
-                    "type": "string",
-                    "description": "Optional tab ID, uses active tab if not specified"
-                },
-                "url": {
-                    "type": "string",
-                    "description": "Direct URL to download"
-                },
-                "save_path": {
-                    "type": "string",
-                    "description": "Path to save the downloaded file (directory or full file path)"
-                },
-                "wait_for_completion": {
-                    "type": "boolean",
-                    "default": True,
-                    "description": "Wait for download to complete"
-                },
-                "timeout": {
-                    "type": "integer",
-                    "default": 30,
-                    "description": "Timeout in seconds for download completion"
-                }
-            },
-            "required": ["browser_id"]
-        }
-    ),
-    Tool(
-        name="manage_downloads",
-        description="Manage browser downloads (list, pause, resume, cancel)",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "action": {
-                    "type": "string",
-                    "enum": ["list", "pause", "resume", "cancel", "clear"],
-                    "description": "Download management action"
-                },
-                "download_id": {
-                    "type": "string",
-                    "description": "ID of specific download to manage"
-                }
-            },
-            "required": ["browser_id", "action"]
-        }
-    ),
+    # download_file and manage_downloads removed - use unified tool: manage_file instead
     Tool(
         name="extract_data",
         description="Extract structured data from the current page",
@@ -626,9 +570,7 @@ async def handle_load_session(arguments: Dict[str, Any]) -> Sequence[TextContent
 
 # Tool Handlers Registry
 FILE_TOOL_HANDLERS = {
-    "upload_file": handle_upload_file,
-    "download_file": handle_download_file,
-    "manage_downloads": handle_manage_downloads,
+    # upload_file, download_file, manage_downloads removed - use unified tool: manage_file instead
     "extract_data": handle_extract_data,
     "export_to_csv": handle_export_to_csv,
     "export_to_json": handle_export_to_json,

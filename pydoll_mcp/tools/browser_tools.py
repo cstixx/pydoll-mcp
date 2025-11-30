@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Sequence
 
 from mcp.types import Tool, TextContent
 
-from ..browser_manager import get_browser_manager
+from ..core import get_browser_manager
 from ..models import BrowserConfig, BrowserInstance, BrowserStatus, OperationResult
 
 logger = logging.getLogger(__name__)
@@ -22,209 +22,8 @@ logger = logging.getLogger(__name__)
 # Browser Management Tools Definition
 
 BROWSER_TOOLS = [
-    Tool(
-        name="start_browser",
-        description="Start a new browser instance with specified configuration",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_type": {
-                    "type": "string",
-                    "enum": ["chrome", "edge"],
-                    "default": "chrome",
-                    "description": "Type of browser to start"
-                },
-                "headless": {
-                    "type": "boolean",
-                    "default": False,
-                    "description": "Run browser in headless mode"
-                },
-                "window_width": {
-                    "type": "integer",
-                    "default": 1920,
-                    "minimum": 100,
-                    "maximum": 7680,
-                    "description": "Browser window width in pixels"
-                },
-                "window_height": {
-                    "type": "integer",
-                    "default": 1080,
-                    "minimum": 100,
-                    "maximum": 4320,
-                    "description": "Browser window height in pixels"
-                },
-                "stealth_mode": {
-                    "type": "boolean",
-                    "default": True,
-                    "description": "Enable stealth mode to avoid detection"
-                },
-                "proxy_server": {
-                    "type": "string",
-                    "description": "Proxy server in format host:port"
-                },
-                "user_agent": {
-                    "type": "string",
-                    "description": "Custom user agent string"
-                },
-                "disable_images": {
-                    "type": "boolean",
-                    "default": False,
-                    "description": "Disable image loading for faster browsing"
-                },
-                "block_ads": {
-                    "type": "boolean",
-                    "default": True,
-                    "description": "Block advertisement requests"
-                },
-                "custom_args": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Additional browser command line arguments"
-                },
-                "start_timeout": {
-                    "type": "integer",
-                    "default": 30,
-                    "minimum": 1,
-                    "maximum": 300,
-                    "description": "Browser startup timeout in seconds (PyDoll 2.12.4+)"
-                }
-            },
-            "required": []
-        }
-    ),
-
-    Tool(
-        name="stop_browser",
-        description="Stop a browser instance and clean up resources",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID to stop"
-                },
-                "force": {
-                    "type": "boolean",
-                    "default": False,
-                    "description": "Force stop even if tabs are open"
-                }
-            },
-            "required": ["browser_id"]
-        }
-    ),
-
-    Tool(
-        name="list_browsers",
-        description="List all active browser instances with their status",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "include_stats": {
-                    "type": "boolean",
-                    "default": True,
-                    "description": "Include performance statistics"
-                }
-            },
-            "required": []
-        }
-    ),
-
-    Tool(
-        name="get_browser_status",
-        description="Get detailed status information for a specific browser",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                }
-            },
-            "required": ["browser_id"]
-        }
-    ),
-
-    Tool(
-        name="new_tab",
-        description="Create a new tab in a browser instance",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "url": {
-                    "type": "string",
-                    "description": "Optional URL to navigate to immediately"
-                },
-                "background": {
-                    "type": "boolean",
-                    "default": False,
-                    "description": "Open tab in background"
-                }
-            },
-            "required": ["browser_id"]
-        }
-    ),
-
-    Tool(
-        name="close_tab",
-        description="Close a specific tab in a browser",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "tab_id": {
-                    "type": "string",
-                    "description": "Tab ID to close"
-                }
-            },
-            "required": ["browser_id", "tab_id"]
-        }
-    ),
-
-    Tool(
-        name="list_tabs",
-        description="List all tabs in a browser instance",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "include_content": {
-                    "type": "boolean",
-                    "default": False,
-                    "description": "Include page content information"
-                }
-            },
-            "required": ["browser_id"]
-        }
-    ),
-
-    Tool(
-        name="set_active_tab",
-        description="Switch to a specific tab in a browser",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "tab_id": {
-                    "type": "string",
-                    "description": "Tab ID to activate"
-                }
-            },
-            "required": ["browser_id", "tab_id"]
-        }
-    ),
+    # Note: start_browser, stop_browser, list_browsers, get_browser_status, new_tab, close_tab, list_tabs, set_active_tab
+    # have been removed - use unified tools: browser_control and manage_tab instead
     Tool(
         name="bring_tab_to_front",
         description="Bring a tab to the front (activate it) in the browser window for multi-tab focus management",
@@ -503,12 +302,27 @@ async def handle_stop_browser(arguments: Dict[str, Any]) -> Sequence[TextContent
 # Placeholder handlers for remaining browser tools
 async def handle_list_browsers(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle list browsers request."""
-    from pydoll_mcp.browser_manager import browser_manager
+    from pydoll_mcp.core import get_browser_manager
+    browser_manager = get_browser_manager()
 
     try:
+        # Get browsers from SessionStore
+        active_browsers = await browser_manager.session_store.list_browsers(active_only=True)
         browsers_info = []
-        for browser_id, instance in browser_manager.browsers.items():
-            browsers_info.append(instance.to_dict())
+        for browser_data in active_browsers:
+            browser_id = browser_data["browser_id"]
+            # Try to get instance from active cache
+            instance = browser_manager._active_browsers.get(browser_id)
+            if instance:
+                browsers_info.append(instance.to_dict())
+            else:
+                # Browser exists in store but not in cache
+                browsers_info.append({
+                    "instance_id": browser_id,
+                    "browser_type": browser_data.get("browser_type", "unknown"),
+                    "status": "not_attached",
+                    **browser_data
+                })
 
         result = OperationResult(
             success=True,
@@ -532,7 +346,8 @@ async def handle_list_browsers(arguments: Dict[str, Any]) -> Sequence[TextConten
 
 async def handle_get_browser_status(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle get browser status request."""
-    from pydoll_mcp.browser_manager import browser_manager
+    from pydoll_mcp.core import get_browser_manager
+    browser_manager = get_browser_manager()
 
     browser_id = arguments.get("browser_id")
     if not browser_id:
@@ -544,7 +359,7 @@ async def handle_get_browser_status(arguments: Dict[str, Any]) -> Sequence[TextC
         return [TextContent(type="text", text=result.json())]
 
     try:
-        instance = browser_manager.browsers.get(browser_id)
+        instance = await browser_manager.get_browser(browser_id)
         if not instance:
             result = OperationResult(
                 success=False,
@@ -571,7 +386,7 @@ async def handle_get_browser_status(arguments: Dict[str, Any]) -> Sequence[TextC
 async def handle_new_tab(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle new tab creation request."""
     import uuid
-    from ..browser_manager import get_browser_manager
+    from ..core import get_browser_manager
 
     try:
         browser_id = arguments.get("browser_id")
@@ -644,7 +459,7 @@ async def handle_new_tab(arguments: Dict[str, Any]) -> Sequence[TextContent]:
 
 async def handle_close_tab(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle tab close request."""
-    from ..browser_manager import get_browser_manager
+    from ..core import get_browser_manager
 
     try:
         browser_id = arguments.get("browser_id")
@@ -692,7 +507,7 @@ async def handle_close_tab(arguments: Dict[str, Any]) -> Sequence[TextContent]:
 
 async def handle_list_tabs(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle list tabs request."""
-    from ..browser_manager import get_browser_manager
+    from ..core import get_browser_manager
 
     try:
         browser_id = arguments.get("browser_id")
@@ -769,7 +584,7 @@ async def handle_list_tabs(arguments: Dict[str, Any]) -> Sequence[TextContent]:
 
 async def handle_set_active_tab(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle set active tab request."""
-    from ..browser_manager import get_browser_manager
+    from ..core import get_browser_manager
 
     try:
         browser_id = arguments.get("browser_id")
@@ -1491,15 +1306,9 @@ async def handle_reset_permissions(arguments: Dict[str, Any]) -> Sequence[TextCo
 
 
 # Browser Tool Handlers Dictionary
+# Note: Handlers for start_browser, stop_browser, list_browsers, get_browser_status, new_tab, close_tab, list_tabs, set_active_tab
+# are kept as internal functions (used by unified tools) but removed from public API
 BROWSER_TOOL_HANDLERS = {
-    "start_browser": handle_start_browser,
-    "stop_browser": handle_stop_browser,
-    "list_browsers": handle_list_browsers,
-    "get_browser_status": handle_get_browser_status,
-    "new_tab": handle_new_tab,
-    "close_tab": handle_close_tab,
-    "list_tabs": handle_list_tabs,
-    "set_active_tab": handle_set_active_tab,
     "bring_tab_to_front": handle_bring_tab_to_front,
     "set_download_behavior": handle_set_download_behavior,
     "set_download_path": handle_set_download_path,

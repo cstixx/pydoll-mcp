@@ -16,13 +16,16 @@ from typing import Any, Dict, List, Sequence
 
 from mcp.types import Tool, TextContent
 
-from ..browser_manager import get_browser_manager
+from ..core import get_browser_manager
 from ..models import ElementSelector, ElementInfo, InteractionResult, OperationResult
 
 logger = logging.getLogger(__name__)
 
 # Element Tools Definition
 
+# Note: All element tools have been moved to unified tools
+# - find_element, click_element, type_text, press_key, find_or_wait_element, query, get_parent_element
+# Use unified tools: find_element and interact_element instead
 ELEMENT_TOOLS = [
     Tool(
         name="find_element",
@@ -1186,12 +1189,5 @@ async def handle_press_key(arguments: Dict[str, Any]) -> Sequence[TextContent]:
 
 
 # Element Tool Handlers Dictionary
-ELEMENT_TOOL_HANDLERS = {
-    "find_element": handle_find_element,
-    "click_element": handle_click_element,
-    "type_text": handle_type_text,
-    "get_parent_element": handle_get_parent_element,
-    "find_or_wait_element": handle_find_or_wait_element,
-    "query": handle_query,
-    "press_key": handle_press_key,
-}
+# Note: All handlers are kept as internal functions (used by unified tools) but removed from public API
+ELEMENT_TOOL_HANDLERS = {}

@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 
 from mcp.types import Tool, TextContent
 
-from ..browser_manager import get_browser_manager
+from ..core import get_browser_manager
 from ..models import OperationResult
 
 logger = logging.getLogger(__name__)
@@ -21,161 +21,8 @@ logger = logging.getLogger(__name__)
 # Navigation Tools Definition
 
 NAVIGATION_TOOLS = [
-    Tool(
-        name="navigate_to",
-        description="Navigate to a specific URL in a browser tab",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "url": {
-                    "type": "string",
-                    "description": "URL to navigate to"
-                },
-                "tab_id": {
-                    "type": "string",
-                    "description": "Optional tab ID, uses active tab if not specified"
-                },
-                "wait_for_load": {
-                    "type": "boolean",
-                    "default": True,
-                    "description": "Wait for page to fully load"
-                },
-                "timeout": {
-                    "type": "integer",
-                    "default": 30,
-                    "minimum": 1,
-                    "maximum": 300,
-                    "description": "Navigation timeout in seconds"
-                },
-                "referrer": {
-                    "type": "string",
-                    "description": "Optional referrer URL"
-                }
-            },
-            "required": ["browser_id", "url"]
-        }
-    ),
-
-    Tool(
-        name="refresh_page",
-        description="Refresh the current page in a browser tab",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "tab_id": {
-                    "type": "string",
-                    "description": "Optional tab ID, uses active tab if not specified"
-                },
-                "ignore_cache": {
-                    "type": "boolean",
-                    "default": False,
-                    "description": "Force refresh ignoring cache"
-                },
-                "wait_for_load": {
-                    "type": "boolean",
-                    "default": True,
-                    "description": "Wait for page to reload"
-                }
-            },
-            "required": ["browser_id"]
-        }
-    ),
-
-    Tool(
-        name="go_back",
-        description="Navigate back in browser history",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "tab_id": {
-                    "type": "string",
-                    "description": "Optional tab ID, uses active tab if not specified"
-                },
-                "steps": {
-                    "type": "integer",
-                    "default": 1,
-                    "minimum": 1,
-                    "maximum": 10,
-                    "description": "Number of steps to go back"
-                }
-            },
-            "required": ["browser_id"]
-        }
-    ),
-
-    Tool(
-        name="get_current_url",
-        description="Get the current URL of a browser tab",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "tab_id": {
-                    "type": "string",
-                    "description": "Optional tab ID, uses active tab if not specified"
-                }
-            },
-            "required": ["browser_id"]
-        }
-    ),
-
-    Tool(
-        name="get_page_title",
-        description="Get the title of the current page",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "tab_id": {
-                    "type": "string",
-                    "description": "Optional tab ID, uses active tab if not specified"
-                }
-            },
-            "required": ["browser_id"]
-        }
-    ),
-
-    Tool(
-        name="get_page_source",
-        description="Get the HTML source code of the current page",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "tab_id": {
-                    "type": "string",
-                    "description": "Optional tab ID, uses active tab if not specified"
-                },
-                "include_resources": {
-                    "type": "boolean",
-                    "default": False,
-                    "description": "Include information about page resources"
-                }
-            },
-            "required": ["browser_id"]
-        }
-    ),
+    # Note: navigate_to, refresh_page, go_back, get_current_url, get_page_title, get_page_source
+    # have been removed - use unified tools: navigate_page and manage_tab instead
 
     Tool(
         name="fetch_domain_commands",
@@ -986,13 +833,9 @@ async def handle_get_frame(arguments: Dict[str, Any]) -> Sequence[TextContent]:
 
 
 # Navigation Tool Handlers Dictionary
+# Note: Handlers for navigate_to, refresh_page, go_back, get_current_url, get_page_title, get_page_source
+# are kept as internal functions (used by unified tools) but removed from public API
 NAVIGATION_TOOL_HANDLERS = {
-    "navigate_to": handle_navigate_to,
-    "refresh_page": handle_refresh_page,
-    "go_back": handle_go_back,
-    "get_current_url": handle_get_current_url,
-    "get_page_title": handle_get_page_title,
-    "get_page_source": handle_get_page_source,
     "fetch_domain_commands": handle_fetch_domain_commands,
     "scroll": handle_scroll,
     "get_frame": handle_get_frame,

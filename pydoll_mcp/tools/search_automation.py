@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from mcp.types import Tool, TextContent
 
-from ..browser_manager import get_browser_manager
+from ..core import get_browser_manager
 from ..models import OperationResult
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ SEARCH_AUTOMATION_TOOLS = [
                     "description": "Browser instance ID"
                 },
                 "tab_id": {
-                    "type": "string", 
+                    "type": "string",
                     "description": "Optional tab ID, uses active tab if not specified"
                 },
                 "search_query": {
@@ -48,7 +48,7 @@ SEARCH_AUTOMATION_TOOLS = [
                 "submit_method": {
                     "type": "string",
                     "enum": ["auto", "enter", "click", "form"],
-                    "default": "auto", 
+                    "default": "auto",
                     "description": "Method to submit the search"
                 },
                 "wait_for_results": {
@@ -79,10 +79,10 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
         submit_method = arguments.get("submit_method", "auto")
         wait_for_results = arguments.get("wait_for_results", True)
         typing_speed = arguments.get("typing_speed", "normal")
-        
+
         # Get tab with automatic fallback to active tab
         tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
-        
+
         # Enhanced intelligent search script with multiple strategies
         search_script = f'''
         async function performIntelligentSearch() {{
@@ -90,7 +90,7 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
             const websiteType = '{website_type}';
             const submitMethod = '{submit_method}';
             const typingSpeed = '{typing_speed}';
-            
+
             let searchResult = {{
                 success: false,
                 method: '',
@@ -98,7 +98,7 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
                 searchExecuted: false,
                 details: {{}}
             }};
-            
+
             // Strategy 1: Auto-detect website type if needed
             let detectedSiteType = websiteType;
             if (websiteType === 'auto') {{
@@ -108,7 +108,7 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
                 else if (url.includes('duckduckgo.')) detectedSiteType = 'duckduckgo';
                 else detectedSiteType = 'generic';
             }}
-            
+
             // Strategy 2: Website-specific search element selectors
             let searchSelectors = [];
             switch (detectedSiteType) {{
@@ -154,21 +154,21 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
                         '.searchbox'
                     ];
             }}
-            
+
             // Strategy 3: Find search element
             let searchElement = null;
             let foundSelector = '';
-            
+
             for (let selector of searchSelectors) {{
                 try {{
                     const elements = document.querySelectorAll(selector);
                     for (let el of elements) {{
                         const rect = el.getBoundingClientRect();
                         const style = window.getComputedStyle(el);
-                        
+
                         // Check if element is visible and interactable
-                        if (rect.width > 0 && rect.height > 0 && 
-                            style.visibility !== 'hidden' && 
+                        if (rect.width > 0 && rect.height > 0 &&
+                            style.visibility !== 'hidden' &&
                             style.display !== 'none' &&
                             !el.disabled) {{
                             searchElement = el;
@@ -181,12 +181,12 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
                     console.log('Selector failed:', selector, e);
                 }}
             }}
-            
+
             if (!searchElement) {{
                 searchResult.details.error = 'No search element found';
                 return searchResult;
             }}
-            
+
             searchResult.elementFound = true;
             searchResult.details.selector = foundSelector;
             searchResult.details.element = {{
@@ -195,12 +195,12 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
                 id: searchElement.id,
                 placeholder: searchElement.placeholder
             }};
-            
+
             // Strategy 4: Focus and clear the search element
             try {{
                 searchElement.focus();
                 await new Promise(resolve => setTimeout(resolve, 100));
-                
+
                 // Clear existing content
                 searchElement.value = '';
                 searchElement.dispatchEvent(new Event('input', {{ bubbles: true }}));
@@ -208,35 +208,35 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
             }} catch(e) {{
                 console.log('Focus/clear failed:', e);
             }}
-            
+
             // Strategy 5: Type search query with realistic timing
             try {{
                 const typeDelay = typingSpeed === 'instant' ? 0 :
                                 typingSpeed === 'fast' ? 50 :
                                 typingSpeed === 'normal' ? 100 : 200;
-                
+
                 for (let i = 0; i < searchQuery.length; i++) {{
                     searchElement.value += searchQuery[i];
                     searchElement.dispatchEvent(new Event('input', {{ bubbles: true }}));
                     searchElement.dispatchEvent(new Event('keyup', {{ bubbles: true }}));
-                    
+
                     if (typeDelay > 0) {{
                         await new Promise(resolve => setTimeout(resolve, typeDelay + Math.random() * 50));
                     }}
                 }}
-                
+
                 // Final input event
                 searchElement.dispatchEvent(new Event('input', {{ bubbles: true }}));
                 searchResult.details.textEntered = true;
-                
+
             }} catch(e) {{
                 searchResult.details.typeError = e.message;
                 return searchResult;
             }}
-            
+
             // Strategy 6: Submit the search
             let submitted = false;
-            
+
             if (submitMethod === 'auto' || submitMethod === 'enter') {{
                 try {{
                     // Try Enter key first
@@ -249,7 +249,7 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
                         cancelable: true
                     }});
                     searchElement.dispatchEvent(enterEvent);
-                    
+
                     const enterUpEvent = new KeyboardEvent('keyup', {{
                         key: 'Enter',
                         code: 'Enter',
@@ -259,14 +259,14 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
                         cancelable: true
                     }});
                     searchElement.dispatchEvent(enterUpEvent);
-                    
+
                     submitted = true;
                     searchResult.method = 'enter';
                 }} catch(e) {{
                     console.log('Enter key failed:', e);
                 }}
             }}
-            
+
             if (!submitted && (submitMethod === 'auto' || submitMethod === 'click')) {{
                 try {{
                     // Find submit button
@@ -279,7 +279,7 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
                         '#search-button',
                         '[data-testid*="search"]'
                     ];
-                    
+
                     let submitButton = null;
                     for (let selector of buttonSelectors) {{
                         const buttons = document.querySelectorAll(selector);
@@ -292,7 +292,7 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
                         }}
                         if (submitButton) break;
                     }}
-                    
+
                     if (submitButton) {{
                         submitButton.click();
                         submitted = true;
@@ -307,7 +307,7 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
                     console.log('Click submit failed:', e);
                 }}
             }}
-            
+
             if (!submitted && (submitMethod === 'auto' || submitMethod === 'form')) {{
                 try {{
                     // Try form submission
@@ -321,27 +321,27 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
                     console.log('Form submit failed:', e);
                 }}
             }}
-            
+
             searchResult.searchExecuted = submitted;
             searchResult.success = submitted;
-            
+
             return searchResult;
         }}
-        
+
         return await performIntelligentSearch();
         '''
-        
+
         # Execute the intelligent search
         result = await tab.execute_script(search_script)
         search_data = {}
-        
+
         if result and 'result' in result and 'result' in result['result']:
             search_data = result['result']['result'].get('value', {})
-        
+
         # Wait for results if requested
         if wait_for_results and search_data.get('success'):
             await asyncio.sleep(2)  # Give time for results to load
-            
+
             # Check if we're on a results page
             results_check_script = '''
                 return {{
@@ -354,7 +354,7 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
             if results_result and 'result' in results_result and 'result' in results_result['result']:
                 results_data = results_result['result']['result'].get('value', {})
                 search_data['resultsPage'] = results_data
-        
+
         if search_data.get('success'):
             result = OperationResult(
                 success=True,
@@ -379,10 +379,10 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
                     "search_details": search_data
                 }
             )
-        
+
         logger.info(f"Intelligent search completed: {search_data.get('success', False)}")
         return [TextContent(type="text", text=result.json())]
-        
+
     except Exception as e:
         logger.error(f"Intelligent search failed: {e}")
         result = OperationResult(

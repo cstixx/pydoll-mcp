@@ -39,8 +39,10 @@ class TestToolDefinitions:
         assert len(NETWORK_TOOLS) == 25
         assert len(FILE_TOOLS) == 8
 
-        # Total should match all tools
+        # Total should match all tools (including unified tools)
+        from pydoll_mcp.tools import UNIFIED_TOOLS
         total = sum([
+            len(UNIFIED_TOOLS),  # Add unified tools count
             len(BROWSER_TOOLS),
             len(NAVIGATION_TOOLS),
             len(ELEMENT_TOOLS),
@@ -379,3 +381,159 @@ class TestToolDescriptions:
                 # Description should be meaningful
                 desc = param_schema["description"]
                 assert len(desc) > 5
+
+
+class TestUnifiedTools:
+    """Test unified 'Fat Tools' functionality."""
+
+    def test_unified_tools_exist(self):
+        """Test that unified tools are present in ALL_TOOLS."""
+        from pydoll_mcp.tools import UNIFIED_TOOLS
+
+        unified_tool_names = [tool.name for tool in UNIFIED_TOOLS]
+
+        assert "interact_element" in unified_tool_names
+        assert "manage_tab" in unified_tool_names
+        assert "browser_control" in unified_tool_names
+        assert "execute_cdp_command" in unified_tool_names
+
+        # Unified tools should be in ALL_TOOLS
+        all_tool_names = [tool.name for tool in ALL_TOOLS]
+        for name in unified_tool_names:
+            assert name in all_tool_names
+
+    def test_unified_tool_schemas(self):
+        """Test that unified tools have proper input schemas."""
+        from pydoll_mcp.tools import UNIFIED_TOOLS
+
+        for tool in UNIFIED_TOOLS:
+            schema = tool.inputSchema
+            assert "type" in schema
+            assert schema["type"] == "object"
+            assert "properties" in schema
+
+            # Unified tools should have an 'action' property
+            if tool.name in ["interact_element", "manage_tab", "browser_control"]:
+                assert "action" in schema["properties"]
+                assert "enum" in schema["properties"]["action"]
+
+    @pytest.mark.asyncio
+    async def test_interact_element_tool(self):
+        """Test interact_element unified tool."""
+        from pydoll_mcp.tools.definitions import InteractElementInput, ElementAction
+        from pydoll_mcp.tools.handlers import handle_interact_element
+        from unittest.mock import AsyncMock, patch
+
+        with patch('pydoll_mcp.tools.handlers.get_browser_manager') as mock_get_manager:
+            mock_manager = AsyncMock()
+            mock_manager.session_store = AsyncMock()
+            mock_get_manager.return_value = mock_manager
+
+            mock_tab = AsyncMock()
+            mock_element = AsyncMock()
+            mock_element.click = AsyncMock()
+            # Mock query for css_selector
+            mock_tab.query = AsyncMock(return_value=mock_element)
+            mock_manager.get_tab_with_fallback = AsyncMock(return_value=(mock_tab, "tab-1"))
+
+            input_data = InteractElementInput(
+                action=ElementAction.CLICK,
+                browser_id="browser-1",
+                selector={"css_selector": "button"}
+            )
+
+            result = await handle_interact_element(input_data)
+
+            assert len(result) == 1
+            assert result[0].type == "text"
+            mock_element.click.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_manage_tab_tool(self):
+        """Test manage_tab unified tool."""
+        from pydoll_mcp.tools.definitions import ManageTabInput, TabAction
+        from pydoll_mcp.tools.handlers import handle_manage_tab
+        from unittest.mock import AsyncMock, patch
+
+        with patch('pydoll_mcp.tools.handlers.get_browser_manager') as mock_get_manager:
+            mock_manager = AsyncMock()
+            mock_manager.session_store = AsyncMock()
+            mock_get_manager.return_value = mock_manager
+
+            mock_browser_instance = AsyncMock()
+            mock_browser = AsyncMock()
+            mock_tab = AsyncMock()
+            mock_tab.tab_id = "tab-1"
+            mock_tab.page_title = AsyncMock(return_value="Test Page")
+            mock_browser.new_tab = AsyncMock(return_value=mock_tab)
+            mock_browser_instance.browser = mock_browser
+            mock_manager.get_browser = AsyncMock(return_value=mock_browser_instance)
+
+            input_data = ManageTabInput(
+                action=TabAction.CREATE,
+                browser_id="browser-1",
+                url="https://example.com"
+            )
+
+            result = await handle_manage_tab(input_data)
+
+            assert len(result) == 1
+            assert result[0].type == "text"
+            mock_browser.new_tab.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_browser_control_tool(self):
+        """Test browser_control unified tool."""
+        from pydoll_mcp.tools.definitions import BrowserControlInput, BrowserAction
+        from pydoll_mcp.tools.handlers import handle_browser_control
+        from unittest.mock import AsyncMock, patch, Mock
+
+        with patch('pydoll_mcp.tools.handlers.get_browser_manager') as mock_get_manager:
+            mock_manager = AsyncMock()
+            mock_manager.session_store = AsyncMock()
+            mock_get_manager.return_value = mock_manager
+
+            mock_instance = AsyncMock()
+            mock_instance.instance_id = "browser-1"
+            mock_instance.to_dict = Mock(return_value={"browser_id": "browser-1"})
+            mock_manager.create_browser = AsyncMock(return_value=mock_instance)
+
+            input_data = BrowserControlInput(
+                action=BrowserAction.START,
+                config={"headless": True}
+            )
+
+            result = await handle_browser_control(input_data)
+
+            assert len(result) == 1
+            assert result[0].type == "text"
+            mock_manager.create_browser.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_execute_cdp_command_tool(self):
+        """Test execute_cdp_command unified tool."""
+        from pydoll_mcp.tools.definitions import ExecuteCDPInput
+        from pydoll_mcp.tools.handlers import handle_execute_cdp
+        from unittest.mock import AsyncMock, patch
+
+        with patch('pydoll_mcp.tools.handlers.get_browser_manager') as mock_get_manager:
+            mock_manager = AsyncMock()
+            mock_manager.session_store = AsyncMock()
+            mock_get_manager.return_value = mock_manager
+
+            mock_tab = AsyncMock()
+            mock_tab.execute_cdp_command = AsyncMock(return_value={"result": "success"})
+            mock_manager.get_tab_with_fallback = AsyncMock(return_value=(mock_tab, "tab-1"))
+
+            input_data = ExecuteCDPInput(
+                browser_id="browser-1",
+                domain="Page",
+                method="navigate",
+                params={"url": "https://example.com"}
+            )
+
+            result = await handle_execute_cdp(input_data)
+
+            assert len(result) == 1
+            assert result[0].type == "text"
+            mock_tab.execute_cdp_command.assert_awaited_once()

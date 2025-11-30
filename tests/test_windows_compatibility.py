@@ -6,7 +6,7 @@ import pytest
 import sys
 from unittest.mock import Mock, patch, AsyncMock
 
-from pydoll_mcp.browser_manager import BrowserManager, get_browser_manager
+from pydoll_mcp.core import BrowserManager, get_browser_manager
 from pydoll_mcp.pydoll_integration import PyDollIntegration, get_pydoll_integration
 from pydoll_mcp.tools.search_automation import handle_intelligent_search
 
@@ -62,23 +62,33 @@ class TestWindowsCompatibility:
     @pytest.mark.asyncio
     async def test_browser_creation_with_windows_options(self, browser_manager):
         """Test browser creation with Windows-specific options."""
-        with patch('pydoll_mcp.browser_manager.PYDOLL_AVAILABLE', True):
-            with patch('pydoll_mcp.browser_manager.Chrome') as MockChrome:
-                with patch('pydoll_mcp.browser_manager.ChromiumOptions') as MockOptions:
+        with patch('pydoll_mcp.core.browser_manager.PYDOLL_AVAILABLE', True):
+            with patch('pydoll_mcp.core.browser_manager.Chrome') as MockChrome:
+                with patch('pydoll_mcp.core.browser_manager.ChromiumOptions') as MockOptions:
                     mock_options = Mock()
                     MockOptions.return_value = mock_options
 
                     mock_browser = Mock()
-                    mock_tab = Mock()
+                    mock_tab = AsyncMock()
+                    # Mock tab methods that might be called
+                    mock_tab.page_title = AsyncMock(return_value="Test Page")
+                    mock_tab.current_url = AsyncMock(return_value="about:blank")
+                    mock_tab.execute_script = AsyncMock(return_value="complete")
                     MockChrome.return_value = mock_browser
                     mock_browser.start = AsyncMock(return_value=mock_tab)
-                    # Mock _ensure_tab_ready
+
+                    # Mock session_store methods
+                    browser_manager.session_store.save_browser = AsyncMock()
+                    browser_manager.session_store.save_tab = AsyncMock()
+                    browser_manager.session_store.list_browsers = AsyncMock(return_value=[])
+                    # Mock _ensure_tab_ready to avoid hanging (it calls tab methods)
                     browser_manager._ensure_tab_ready = AsyncMock()
 
                     # Test Windows-specific option application
                     with patch('os.name', 'nt'):
                         # Using create_browser instead of internal _get_browser_options to verify full flow
-                        await browser_manager.create_browser()
+                        instance = await browser_manager.create_browser()
+                        assert instance is not None
 
                         # Verify Windows-specific arguments were added
                         assert mock_options.add_argument.called
@@ -203,7 +213,7 @@ class TestNetworkAndPerformance:
 
     def test_performance_metrics_tracking(self):
         """Test performance metrics tracking."""
-        from pydoll_mcp.browser_manager import BrowserMetrics
+        from pydoll_mcp.core import BrowserMetrics
 
         metrics = BrowserMetrics()
 
@@ -237,7 +247,7 @@ class TestAsyncOperations:
         mock_instance.tabs = {"tab1": Mock(), "tab2": Mock()}
         mock_instance.is_active = True
 
-        browser_manager.browsers["test_browser"] = mock_instance
+        browser_manager._active_browsers["test_browser"] = mock_instance
 
         # Test cleanup - using stop() to ensure pool is cleared and cleanup called
         await browser_manager.stop()
@@ -247,7 +257,7 @@ class TestAsyncOperations:
         # OR pool.clear() -> cleanup()
         # Given the previous failure, let's verify either cleanup was called or browsers empty.
 
-        assert len(browser_manager.browsers) == 0
+        assert len(browser_manager._active_browsers) == 0
 
         # We can't easily assert mock_instance.cleanup() called because it might be replaced or logic is complex with pool.
         # But checking browsers list is empty is the main goal.
@@ -255,7 +265,7 @@ class TestAsyncOperations:
     @pytest.mark.asyncio
     async def test_tab_context_manager(self):
         """Test tab context manager for safe operations."""
-        from pydoll_mcp.browser_manager import BrowserInstance
+        from pydoll_mcp.core import BrowserInstance
 
         mock_browser = Mock()
         instance = BrowserInstance(mock_browser, "chrome", "test_id")

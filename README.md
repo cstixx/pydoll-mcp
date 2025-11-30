@@ -474,6 +474,33 @@ PyDoll MCP Server brings the groundbreaking capabilities of PyDoll to Claude, Op
 - **⚡ Native Async Architecture**: Lightning-fast concurrent automation
 - **🕵️ Advanced Stealth Mode**: Anti-detection techniques that make automation invisible
 - **🌐 Real-time Network Control**: Intercept, modify, and analyze all web traffic
+
+### 🎯 Unified Tools Architecture (NEW!)
+
+PyDoll MCP Server now features a streamlined **Unified Tools** architecture designed for better LLM usability:
+
+- **4 Unified "Fat Tools"**: Consolidate ~20-30 common granular tools into powerful, action-based endpoints:
+  - `interact_element` - Click, type, hover, press keys, drag, scroll
+  - `manage_tab` - Create, close, refresh, activate, list tabs
+  - `browser_control` - Start, stop, list browsers, get state, reattach
+  - `execute_cdp_command` - Direct Chrome DevTools Protocol access
+
+- **Session Persistence**: Browser and tab state persisted in SQLite for resilience and recovery
+- **Smart Error Handling**: Context-aware error responses with DOM snapshots and page context
+- **Stateless Design**: BrowserManager decoupled from state management for better scalability
+
+**Important**: Unified tools replace a **subset** of tools (element interaction, tab management, browser control). Many tool categories remain as legacy tools:
+- ✅ Screenshot & Media tools (still use legacy)
+- ✅ Script Execution tools (still use legacy)
+- ✅ Network Monitoring tools (still use legacy)
+- ✅ Protection & Stealth tools (still use legacy)
+- ✅ File Operations tools (still use legacy)
+- ✅ Element Finding tools (still use legacy)
+- ✅ Navigation tools (still use legacy)
+
+See [Unified Tools Coverage](docs/UNIFIED_TOOLS_COVERAGE.md) for complete details on what's replaced vs. what remains.
+
+**Legacy Tools**: All original granular tools remain available for backward compatibility and for operations not covered by unified tools.
 - **🔧 One-Click Setup**: Automatic Claude Desktop configuration
 - **🌍 Universal Compatibility**: Works on all systems including Korean Windows
 - **🎯 NEW v1.5.12**: Intelligent Tab Management with automatic ID detection and fallback mechanisms
@@ -756,7 +783,7 @@ python -m pydoll_mcp.cli status
 
 ### 🚨 Repository Maintainers - Important Security Notice
 
-If you're contributing to this repository or setting up automated releases, please read our **[Security Setup Guide](SECURITY_SETUP.md)** to properly configure GitHub Secrets for:
+If you're contributing to this repository or setting up automated releases, please read our **[Security Setup Guide](docs/guides/SECURITY_SETUP.md)** to properly configure GitHub Secrets for:
 
 - 🔐 **PyPI API Tokens**: Secure package publishing
 - 🔐 **Smithery.ai API Keys**: Automated registry updates
@@ -1096,9 +1123,21 @@ PyDoll MCP Server provides significant advantages over traditional automation:
 | Speed | 3x faster | Baseline |
 | Reliability | 99%+ | 80-85% |
 
+## 📚 Documentation
+
+Comprehensive documentation is available in the [`docs/`](docs/) directory:
+
+- **[Documentation Index](docs/README.md)** - Complete documentation overview
+- **[Installation Guide](docs/guides/installation.md)** - Installation instructions for all platforms
+- **[Architecture Guide](docs/ARCHITECTURE.md)** - System architecture and design
+- **[Tools Guide](PYDOLL_TOOLS_GUIDE.md)** - Complete tool reference
+- **[Contributing Guide](docs/guides/contributing.md)** - How to contribute
+- **[Deployment Guide](docs/guides/deployment.md)** - Release procedures
+- **[Environment Variables](docs/guides/environment-variables.md)** - Configuration reference
+
 ## 🤝 Contributing
 
-We welcome contributions! See our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! See our [Contributing Guide](docs/guides/contributing.md) for details.
 
 ### Development Setup
 ```bash

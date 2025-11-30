@@ -8,11 +8,14 @@ from typing import Any, Dict, List, Sequence
 
 from mcp.types import Tool, TextContent
 
-# Import tool definitions and handlers from each category
+# Import unified tools (Fat Tools) - these are the recommended tools
+from .registry import create_unified_tools, create_unified_handlers
+
+# Import tool definitions and handlers from each category (legacy tools)
+# Note: element_tools, screenshot_tools are fully deprecated (replaced by unified tools)
+# Note: Some file_tools are deprecated (download_file, manage_downloads replaced by unified manage_file)
 from .browser_tools import BROWSER_TOOLS, BROWSER_TOOL_HANDLERS
 from .navigation_tools import NAVIGATION_TOOLS, NAVIGATION_TOOL_HANDLERS
-from .element_tools import ELEMENT_TOOLS, ELEMENT_TOOL_HANDLERS
-from .screenshot_tools import SCREENSHOT_TOOLS, SCREENSHOT_TOOL_HANDLERS
 from .script_tools import SCRIPT_TOOLS, SCRIPT_TOOL_HANDLERS
 from .advanced_tools import ADVANCED_TOOLS, ADVANCED_TOOL_HANDLERS
 from .protection_tools import PROTECTION_TOOLS, PROTECTION_TOOL_HANDLERS
@@ -21,62 +24,81 @@ from .file_tools import FILE_TOOLS, FILE_TOOL_HANDLERS
 from .search_automation import SEARCH_AUTOMATION_TOOLS, SEARCH_AUTOMATION_TOOL_HANDLERS
 from .page_tools import PAGE_TOOLS, PAGE_TOOL_HANDLERS
 
-# Combine all tools and handlers
-ALL_TOOLS = (
-    BROWSER_TOOLS +
-    NAVIGATION_TOOLS +
-    ELEMENT_TOOLS +
-    SCREENSHOT_TOOLS +
-    SCRIPT_TOOLS +
-    ADVANCED_TOOLS +
-    PROTECTION_TOOLS +
-    NETWORK_TOOLS +
-    FILE_TOOLS +
-    SEARCH_AUTOMATION_TOOLS +
-    PAGE_TOOLS
-)
+# Create unified tools
+UNIFIED_TOOLS = create_unified_tools()
+UNIFIED_TOOL_HANDLERS = create_unified_handlers()
 
-ALL_TOOL_HANDLERS = {
-    **BROWSER_TOOL_HANDLERS,
-    **NAVIGATION_TOOL_HANDLERS,
-    **ELEMENT_TOOL_HANDLERS,
-    **SCREENSHOT_TOOL_HANDLERS,
-    **SCRIPT_TOOL_HANDLERS,
-    **ADVANCED_TOOL_HANDLERS,
-    **PROTECTION_TOOL_HANDLERS,
-    **NETWORK_TOOL_HANDLERS,
-    **FILE_TOOL_HANDLERS,
-    **SEARCH_AUTOMATION_TOOL_HANDLERS,
-    **PAGE_TOOL_HANDLERS,
-}
+# Combine all tools and handlers (unified tools first for priority)
+# Note: ELEMENT_TOOLS and SCREENSHOT_TOOLS removed (fully replaced by unified tools)
+# Set to True to only register unified tools (recommended for LLM usage)
+# Set to False to include all legacy tools for backward compatibility
+UNIFIED_TOOLS_ONLY = True  # Change to False to include legacy tools
+
+if UNIFIED_TOOLS_ONLY:
+    # Only register unified tools - clean, minimal toolset
+    ALL_TOOLS = list(UNIFIED_TOOLS)
+else:
+    # Include all legacy tools for backward compatibility
+    ALL_TOOLS = (
+        UNIFIED_TOOLS +  # Unified tools first
+        BROWSER_TOOLS +
+        NAVIGATION_TOOLS +
+        SCRIPT_TOOLS +
+        ADVANCED_TOOLS +
+        PROTECTION_TOOLS +
+        NETWORK_TOOLS +
+        FILE_TOOLS +
+        SEARCH_AUTOMATION_TOOLS +
+        PAGE_TOOLS
+    )
+
+if UNIFIED_TOOLS_ONLY:
+    # Only register unified tool handlers
+    ALL_TOOL_HANDLERS = dict(UNIFIED_TOOL_HANDLERS)
+else:
+    # Include all legacy tool handlers
+    ALL_TOOL_HANDLERS = {
+        **UNIFIED_TOOL_HANDLERS,  # Unified handlers first (take precedence)
+        **BROWSER_TOOL_HANDLERS,
+        **NAVIGATION_TOOL_HANDLERS,
+        # ELEMENT_TOOL_HANDLERS and SCREENSHOT_TOOL_HANDLERS removed (replaced by unified tools)
+        **SCRIPT_TOOL_HANDLERS,
+        **ADVANCED_TOOL_HANDLERS,
+        **PROTECTION_TOOL_HANDLERS,
+        **NETWORK_TOOL_HANDLERS,
+        **FILE_TOOL_HANDLERS,
+        **SEARCH_AUTOMATION_TOOL_HANDLERS,
+        **PAGE_TOOL_HANDLERS,
+    }
 
 # Tool categories for organization
 TOOL_CATEGORIES = {
+    "unified_tools": {
+        "description": "Unified 'Fat Tools' - Recommended for LLM usage. Consolidates ~20-30 common granular tools (element interaction, tab management, browser control) into 4 powerful endpoints. Other tool categories remain as legacy tools.",
+        "tools": [tool.name for tool in UNIFIED_TOOLS],
+        "count": len(UNIFIED_TOOLS),
+        "recommended": True
+    },
     "browser_management": {
-        "description": "Browser lifecycle and configuration management",
+        "description": "Browser lifecycle and configuration management (legacy tools)",
         "tools": [tool.name for tool in BROWSER_TOOLS],
-        "count": len(BROWSER_TOOLS)
+        "count": len(BROWSER_TOOLS),
+        "legacy": True
     },
     "navigation_control": {
-        "description": "Page navigation and URL management",
+        "description": "Page navigation and URL management (legacy tools)",
         "tools": [tool.name for tool in NAVIGATION_TOOLS],
-        "count": len(NAVIGATION_TOOLS)
+        "count": len(NAVIGATION_TOOLS),
+        "legacy": True
     },
-    "element_interaction": {
-        "description": "Element finding and interaction capabilities",
-        "tools": [tool.name for tool in ELEMENT_TOOLS],
-        "count": len(ELEMENT_TOOLS)
-    },
+    # element_interaction category removed - fully replaced by unified tools (find_element, interact_element)
     "page_interaction": {
-        "description": "General page-level interactions",
+        "description": "General page-level interactions (legacy tools)",
         "tools": [tool.name for tool in PAGE_TOOLS],
-        "count": len(PAGE_TOOLS)
+        "count": len(PAGE_TOOLS),
+        "legacy": True
     },
-    "screenshot_media": {
-        "description": "Screenshot and media capture functionality",
-        "tools": [tool.name for tool in SCREENSHOT_TOOLS],
-        "count": len(SCREENSHOT_TOOLS)
-    },
+    # screenshot_media category removed - fully replaced by unified tool (capture_media)
     "script_execution": {
         "description": "JavaScript execution and scripting",
         "tools": [tool.name for tool in SCRIPT_TOOLS],
@@ -96,6 +118,11 @@ TOOL_CATEGORIES = {
         "description": "File upload, download, and management",
         "tools": [tool.name for tool in FILE_TOOLS],
         "count": len(FILE_TOOLS)
+    },
+    "search_automation": {
+        "description": "Intelligent search automation with automatic element detection",
+        "tools": [tool.name for tool in SEARCH_AUTOMATION_TOOLS],
+        "count": len(SEARCH_AUTOMATION_TOOLS)
     }
 }
 
@@ -108,25 +135,36 @@ __all__ = [
     # Tool collections
     "ALL_TOOLS",
     "ALL_TOOL_HANDLERS",
+    "UNIFIED_TOOLS",
+    "UNIFIED_TOOL_HANDLERS",
+    "UNIFIED_TOOLS_ONLY",
     "TOOL_CATEGORIES",
 
     # Individual category tools
     "BROWSER_TOOLS",
     "NAVIGATION_TOOLS",
-    "ELEMENT_TOOLS",
+    # ELEMENT_TOOLS removed (replaced by unified tools)
     "PAGE_TOOLS",
-    "SCREENSHOT_TOOLS",
+    # SCREENSHOT_TOOLS removed (replaced by unified tools)
     "SCRIPT_TOOLS",
     "ADVANCED_TOOLS",
+    "PROTECTION_TOOLS",
+    "NETWORK_TOOLS",
+    "FILE_TOOLS",
+    "SEARCH_AUTOMATION_TOOLS",
 
     # Individual category handlers
     "BROWSER_TOOL_HANDLERS",
     "NAVIGATION_TOOL_HANDLERS",
-    "ELEMENT_TOOL_HANDLERS",
+    # ELEMENT_TOOL_HANDLERS removed (replaced by unified tools)
     "PAGE_TOOL_HANDLERS",
-    "SCREENSHOT_TOOL_HANDLERS",
+    # SCREENSHOT_TOOL_HANDLERS removed (replaced by unified tools)
     "SCRIPT_TOOL_HANDLERS",
     "ADVANCED_TOOL_HANDLERS",
+    "PROTECTION_TOOL_HANDLERS",
+    "NETWORK_TOOL_HANDLERS",
+    "FILE_TOOL_HANDLERS",
+    "SEARCH_AUTOMATION_TOOL_HANDLERS",
 
     # Statistics
     "TOTAL_TOOLS",
@@ -176,11 +214,18 @@ def get_tool_info() -> Dict[str, Any]:
     Returns:
         Dictionary with tool statistics and information
     """
+    unified_tool_names = [tool.name for tool in UNIFIED_TOOLS]
+    legacy_tool_names = [tool.name for tool in ALL_TOOLS if tool.name not in unified_tool_names]
+
     return {
         "total_tools": TOTAL_TOOLS,
+        "unified_tools": len(UNIFIED_TOOLS),
+        "legacy_tools": len(legacy_tool_names),
         "total_categories": TOTAL_CATEGORIES,
         "categories": TOOL_CATEGORIES,
         "tool_names": [tool.name for tool in ALL_TOOLS],
+        "unified_tool_names": unified_tool_names,
+        "recommended_tools": unified_tool_names,  # Unified tools are recommended
         "capabilities": {
             "browser_automation": True,
             "captcha_bypass": True,
@@ -190,6 +235,7 @@ def get_tool_info() -> Dict[str, Any]:
             "stealth_mode": True,
             "screenshot_capture": True,
             "multi_browser_support": True,
+            "unified_tools": True,  # Unified tools architecture available
         }
     }
 

@@ -1,18 +1,396 @@
 # PyDoll Tools Guide
 
-This guide provides a comprehensive overview of all available tools in the PyDoll library.
+This guide provides a comprehensive overview of all available tools in the PyDoll MCP Server.
 
 ## Table of Contents
 
-1.  [Browser Management](#browser-management)
-2.  [Navigation](#navigation)
-3.  [Page Interaction](#page-interaction)
-4.  [Element Interaction](#element-interaction)
-5.  [Scripting & Automation](#scripting--automation)
-6.  [Screenshots & PDF](#screenshots--pdf)
-7.  [Network Control](#network-control)
-8.  [Protection & Evasion](#protection--evasion)
-9.  [Advanced Tools](#advanced-tools)
+1.  [Unified Tools (Recommended)](#unified-tools-recommended) ⭐ NEW
+2.  [Browser Management](#browser-management)
+3.  [Navigation](#navigation)
+4.  [Page Interaction](#page-interaction)
+5.  [Element Interaction](#element-interaction)
+6.  [Scripting & Automation](#scripting--automation)
+7.  [Screenshots & PDF](#screenshots--pdf)
+8.  [Network Control](#network-control)
+9.  [Protection & Evasion](#protection--evasion)
+10. [Advanced Tools](#advanced-tools)
+
+---
+
+## Unified Tools (Recommended) ⭐
+
+**NEW in v1.6.0+**: PyDoll MCP Server now features **Unified Tools** - a streamlined architecture that consolidates ~60 granular tools into 4 powerful, action-based endpoints. These are **recommended for LLM usage** as they provide a cleaner, more intuitive API.
+
+### Why Unified Tools?
+
+- **Reduced Complexity**: 4 tools instead of 60+
+- **Action-Based API**: Clear action parameter instead of separate tools
+- **Better Error Context**: Rich debugging information with DOM snapshots
+- **Backward Compatible**: Legacy tools remain available
+
+### Available Unified Tools
+
+1. **[`interact_element`](#interact_element)** - Element interactions (click, type, hover, press_key, drag, scroll)
+2. **[`manage_tab`](#manage_tab)** - Tab management (create, close, refresh, activate, list, get_info)
+3. **[`browser_control`](#browser_control)** - Browser lifecycle (start, stop, list, get_state, reattach)
+4. **[`execute_cdp_command`](#execute_cdp_command)** - Direct Chrome DevTools Protocol access
+
+---
+
+### `interact_element`
+
+Unified tool for all element interactions. Consolidates click, type, hover, press_key, drag, and scroll operations.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | string | Yes | Action to perform. Enum: `click`, `type`, `hover`, `press_key`, `drag`, `scroll` |
+| `browser_id` | string | Yes | Browser instance ID |
+| `tab_id` | string | No | Tab ID (uses active tab if not specified) |
+| `selector` | object | Yes | Element selector dictionary (see below) |
+| `value` | string | No | Value for `type` action or key for `press_key` action |
+| `key` | string | No | Key for `press_key` action (e.g., 'Enter', 'Escape', 'Control+c') |
+| `click_type` | string | No | Click type: `left`, `right`, `double`, `middle` (default: `left`) |
+| `scroll_to_element` | boolean | No | Scroll element into view before action (default: `true`) |
+| `human_like` | boolean | No | Use human-like behavior (default: `true`) |
+| `typing_speed` | string | No | Typing speed: `slow`, `normal`, `fast`, `instant` (default: `normal`) |
+| `clear_first` | boolean | No | Clear existing text before typing (default: `true`) |
+
+**Selector Object:**
+
+The `selector` parameter accepts various ways to identify elements:
+
+```json
+{
+  "id": "submit-button",
+  "class_name": "btn-primary",
+  "tag_name": "button",
+  "text": "Submit",
+  "name": "submitBtn",
+  "type": "submit",
+  "placeholder": "Enter text",
+  "value": "Click me",
+  "data_testid": "submit-btn",
+  "data_id": "submit-123",
+  "aria_label": "Submit form",
+  "aria_role": "button",
+  "css_selector": "button.submit",
+  "xpath": "//button[@class='submit']"
+}
+```
+
+**Action Examples:**
+
+**Click Action:**
+```json
+{
+  "tool": "interact_element",
+  "arguments": {
+    "action": "click",
+    "browser_id": "browser-1",
+    "selector": {"css_selector": "button.submit"},
+    "click_type": "left"
+  }
+}
+```
+
+**Type Action:**
+```json
+{
+  "tool": "interact_element",
+  "arguments": {
+    "action": "type",
+    "browser_id": "browser-1",
+    "selector": {"id": "search-input"},
+    "value": "Hello, World!",
+    "clear_first": true,
+    "typing_speed": "normal"
+  }
+}
+```
+
+**Hover Action:**
+```json
+{
+  "tool": "interact_element",
+  "arguments": {
+    "action": "hover",
+    "browser_id": "browser-1",
+    "selector": {"class_name": "dropdown-trigger"}
+  }
+}
+```
+
+**Press Key Action:**
+```json
+{
+  "tool": "interact_element",
+  "arguments": {
+    "action": "press_key",
+    "browser_id": "browser-1",
+    "key": "Enter"
+  }
+}
+```
+
+**Returns:**
+An `OperationResult` object with success status and operation details.
+
+---
+
+### `manage_tab`
+
+Unified tool for tab management operations. Consolidates create, close, refresh, activate, list, and get_info operations.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | string | Yes | Action to perform. Enum: `create`, `close`, `refresh`, `activate`, `list`, `get_info` |
+| `browser_id` | string | Yes | Browser instance ID |
+| `tab_id` | string | No | Tab ID (required for close, refresh, activate, get_info) |
+| `url` | string | No | URL for `create` action |
+| `background` | boolean | No | Open tab in background (default: `false`) |
+| `wait_for_load` | boolean | No | Wait for page to load (default: `true`) |
+| `ignore_cache` | boolean | No | Ignore cache on refresh (default: `false`) |
+
+**Action Examples:**
+
+**Create Tab:**
+```json
+{
+  "tool": "manage_tab",
+  "arguments": {
+    "action": "create",
+    "browser_id": "browser-1",
+    "url": "https://example.com",
+    "background": false
+  }
+}
+```
+
+**Close Tab:**
+```json
+{
+  "tool": "manage_tab",
+  "arguments": {
+    "action": "close",
+    "browser_id": "browser-1",
+    "tab_id": "tab-123"
+  }
+}
+```
+
+**Refresh Tab:**
+```json
+{
+  "tool": "manage_tab",
+  "arguments": {
+    "action": "refresh",
+    "browser_id": "browser-1",
+    "tab_id": "tab-123",
+    "ignore_cache": true
+  }
+}
+```
+
+**Activate Tab:**
+```json
+{
+  "tool": "manage_tab",
+  "arguments": {
+    "action": "activate",
+    "browser_id": "browser-1",
+    "tab_id": "tab-123"
+  }
+}
+```
+
+**List Tabs:**
+```json
+{
+  "tool": "manage_tab",
+  "arguments": {
+    "action": "list",
+    "browser_id": "browser-1"
+  }
+}
+```
+
+**Get Tab Info:**
+```json
+{
+  "tool": "manage_tab",
+  "arguments": {
+    "action": "get_info",
+    "browser_id": "browser-1",
+    "tab_id": "tab-123"
+  }
+}
+```
+
+**Returns:**
+An `OperationResult` object with tab information or operation status.
+
+---
+
+### `browser_control`
+
+Unified tool for browser lifecycle management. Consolidates start, stop, list, get_state, and reattach operations.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | string | Yes | Action to perform. Enum: `start`, `stop`, `list`, `get_state`, `reattach` |
+| `browser_id` | string | No | Browser ID (required for stop, get_state, reattach) |
+| `config` | object | No | Browser configuration for `start` action (see below) |
+
+**Browser Config Object (for `start` action):**
+
+```json
+{
+  "browser_type": "chrome",
+  "headless": false,
+  "window_width": 1920,
+  "window_height": 1080,
+  "stealth_mode": true,
+  "proxy_server": "host:port",
+  "user_agent": "Custom User Agent"
+}
+```
+
+**Action Examples:**
+
+**Start Browser:**
+```json
+{
+  "tool": "browser_control",
+  "arguments": {
+    "action": "start",
+    "config": {
+      "browser_type": "chrome",
+      "headless": false,
+      "stealth_mode": true
+    }
+  }
+}
+```
+
+**Stop Browser:**
+```json
+{
+  "tool": "browser_control",
+  "arguments": {
+    "action": "stop",
+    "browser_id": "browser-1"
+  }
+}
+```
+
+**List Browsers:**
+```json
+{
+  "tool": "browser_control",
+  "arguments": {
+    "action": "list"
+  }
+}
+```
+
+**Get Browser State:**
+```json
+{
+  "tool": "browser_control",
+  "arguments": {
+    "action": "get_state",
+    "browser_id": "browser-1"
+  }
+}
+```
+
+**Returns:**
+An `OperationResult` object with browser information or operation status.
+
+---
+
+### `execute_cdp_command`
+
+Direct access to Chrome DevTools Protocol (CDP) commands. Provides an "escape hatch" for advanced operations not covered by other tools.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `browser_id` | string | Yes | Browser instance ID |
+| `tab_id` | string | No | Tab ID (uses active tab if not specified) |
+| `domain` | string | Yes | CDP domain (e.g., 'Page', 'Network', 'DOM', 'Runtime') |
+| `method` | string | Yes | CDP method within the domain (e.g., 'navigate', 'enable') |
+| `params` | object | No | Parameters for the CDP method (default: `{}`) |
+
+**Example:**
+
+**Navigate using CDP:**
+```json
+{
+  "tool": "execute_cdp_command",
+  "arguments": {
+    "browser_id": "browser-1",
+    "domain": "Page",
+    "method": "navigate",
+    "params": {
+      "url": "https://example.com"
+    }
+  }
+}
+```
+
+**Enable Network Domain:**
+```json
+{
+  "tool": "execute_cdp_command",
+  "arguments": {
+    "browser_id": "browser-1",
+    "domain": "Network",
+    "method": "enable",
+    "params": {}
+  }
+}
+```
+
+**Execute JavaScript:**
+```json
+{
+  "tool": "execute_cdp_command",
+  "arguments": {
+    "browser_id": "browser-1",
+    "domain": "Runtime",
+    "method": "evaluate",
+    "params": {
+      "expression": "document.title"
+    }
+  }
+}
+```
+
+**Returns:**
+An `OperationResult` object with the CDP command result.
+
+**Available CDP Domains:**
+- `Page` - Page navigation and lifecycle
+- `Network` - Network monitoring and control
+- `DOM` - DOM manipulation and querying
+- `Runtime` - JavaScript execution
+- `Debugger` - Debugging support
+- `Performance` - Performance metrics
+- And many more... (see [Chrome DevTools Protocol documentation](https://chromedevtools.github.io/devtools-protocol/))
+
+---
+
+## Legacy Tools
+
+The following sections document the legacy granular tools. These remain available for backward compatibility, but **we recommend using the Unified Tools** for new implementations.
 
 ---
 

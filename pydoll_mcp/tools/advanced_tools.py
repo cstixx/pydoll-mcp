@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from mcp.types import Tool, TextContent
 
-from ..browser_manager import get_browser_manager
+from ..core import get_browser_manager
 from ..models import OperationResult
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ ADVANCED_TOOLS = [
             "required": ["browser_id"]
         }
     ),
-    
+
     Tool(
         name="intercept_network_requests",
         description="Intercept and modify network requests and responses",
@@ -131,7 +131,7 @@ ADVANCED_TOOLS = [
             "required": ["browser_id", "action"]
         }
     ),
-    
+
     Tool(
         name="analyze_content_with_ai",
         description="Analyze page content using AI for insights and recommendations",
@@ -191,9 +191,9 @@ async def handle_analyze_performance(arguments: Dict[str, Any]) -> Sequence[Text
         tab_id = arguments.get("tab_id")
         metrics_to_collect = arguments.get("metrics_to_collect", ["timing", "navigation", "paint"])
         include_suggestions = arguments.get("include_suggestions", True)
-        
+
         tab = await browser_manager.get_tab(browser_id, tab_id)
-        
+
         # Simulate performance data collection
         performance_data = {
             "navigationTiming": {
@@ -220,24 +220,24 @@ async def handle_analyze_performance(arguments: Dict[str, Any]) -> Sequence[Text
                 "jsHeapSizeLimit": 2172649472
             }
         }
-        
+
         # Generate performance suggestions
         suggestions = []
         if include_suggestions:
             metrics = performance_data.get("metrics", {})
-            
+
             if metrics.get("domainLookupTime", 0) > 100:
                 suggestions.append("Consider using DNS prefetching for external domains")
-            
+
             if metrics.get("connectionTime", 0) > 200:
                 suggestions.append("Connection time is high - consider using HTTP/2 or connection keep-alive")
-            
+
             if metrics.get("domProcessingTime", 0) > 2000:
                 suggestions.append("DOM processing time is high - consider optimizing JavaScript and CSS")
-            
+
             if metrics.get("totalTime", 0) > 3000:
                 suggestions.append("Total page load time is high - consider overall optimization")
-        
+
         # Performance score calculation
         total_time = performance_data.get("metrics", {}).get("totalTime", 0)
         if total_time < 1000:
@@ -250,7 +250,7 @@ async def handle_analyze_performance(arguments: Dict[str, Any]) -> Sequence[Text
             score = 60
         else:
             score = 40
-        
+
         result = OperationResult(
             success=True,
             message="Performance analysis completed",
@@ -264,10 +264,10 @@ async def handle_analyze_performance(arguments: Dict[str, Any]) -> Sequence[Text
                 "metrics_collected": metrics_to_collect
             }
         )
-        
+
         logger.info(f"Performance analysis completed with score: {score}")
         return [TextContent(type="text", text=result.json())]
-        
+
     except Exception as e:
         logger.error(f"Performance analysis failed: {e}")
         result = OperationResult(
@@ -283,7 +283,7 @@ async def handle_intercept_network_requests(arguments: Dict[str, Any]) -> Sequen
     """Handle network request interception."""
     action = arguments["action"]
     patterns = arguments.get("patterns", [])
-    
+
     if action == "start":
         result_data = {
             "action": "started",
@@ -304,7 +304,7 @@ async def handle_intercept_network_requests(arguments: Dict[str, Any]) -> Sequen
             "patterns": patterns,
             "rules_updated": True
         }
-    
+
     result = OperationResult(
         success=True,
         message=f"Network interception {action}ed successfully",
@@ -316,7 +316,7 @@ async def handle_intercept_network_requests(arguments: Dict[str, Any]) -> Sequen
 async def handle_analyze_content_with_ai(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle AI content analysis."""
     analysis_type = arguments["analysis_type"]
-    
+
     # Mock AI analysis results
     analysis_results = {
         "sentiment": {"score": 0.75, "label": "positive", "confidence": 0.89},
@@ -327,7 +327,7 @@ async def handle_analyze_content_with_ai(arguments: Dict[str, Any]) -> Sequence[
         "readability": {"score": 72, "grade_level": "college", "reading_time": "5 minutes"},
         "structure": {"headings": 8, "paragraphs": 25, "links": 45, "images": 12}
     }
-    
+
     result = OperationResult(
         success=True,
         message=f"AI {analysis_type} analysis completed",

@@ -16,7 +16,7 @@ import time
 
 from mcp.types import Tool, TextContent
 
-from ..browser_manager import get_browser_manager
+from ..core import get_browser_manager
 from ..models import OperationResult
 
 logger = logging.getLogger(__name__)
@@ -344,7 +344,8 @@ async def handle_enable_stealth_mode(arguments: Dict[str, Any]) -> Sequence[Text
         browser_manager = get_browser_manager()
 
         # Check if PyDoll is available
-        if hasattr(browser_manager, 'browsers') and browser_id in browser_manager.browsers:
+        instance = await browser_manager.get_browser(browser_id)
+        if instance:
             # Real implementation would enable stealth features
             logger.info(f"Enabling {level} stealth mode for browser {browser_id}")
 
