@@ -798,4 +798,4 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
 SEARCH_AUTOMATION_TOOL_HANDLERS = {
     "intelligent_search": handle_intelligent_search,
 }
->>>>>>> 38bf80dd80f87d61faa654c60d3fe056f753cbda
+

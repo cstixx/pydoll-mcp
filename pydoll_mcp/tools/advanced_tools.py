@@ -698,4 +698,4 @@ ADVANCED_TOOL_HANDLERS = {
     "intercept_network_requests": handle_intercept_network_requests,
     "analyze_content_with_ai": handle_analyze_content_with_ai,
 }
->>>>>>> 38bf80dd80f87d61faa654c60d3fe056f753cbda
+
