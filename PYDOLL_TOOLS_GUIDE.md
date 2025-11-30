@@ -19,11 +19,11 @@ This guide provides a comprehensive overview of all available tools in the PyDol
 
 ## Unified Tools (Recommended) ⭐
 
-**NEW in v1.6.0+**: PyDoll MCP Server now features **Unified Tools** - a streamlined architecture that consolidates ~60 granular tools into 4 powerful, action-based endpoints. These are **recommended for LLM usage** as they provide a cleaner, more intuitive API.
+**NEW in v1.6.0+**: PyDoll MCP Server now features **Unified Tools** - a streamlined architecture that consolidates ~50-60 granular tools into 10 powerful, action-based endpoints. These are **recommended for LLM usage** as they provide a cleaner, more intuitive API.
 
 ### Why Unified Tools?
 
-- **Reduced Complexity**: 4 tools instead of 60+
+- **Reduced Complexity**: 10 tools instead of 60+
 - **Action-Based API**: Clear action parameter instead of separate tools
 - **Better Error Context**: Rich debugging information with DOM snapshots
 - **Backward Compatible**: Legacy tools remain available
@@ -32,8 +32,14 @@ This guide provides a comprehensive overview of all available tools in the PyDol
 
 1. **[`interact_element`](#interact_element)** - Element interactions (click, type, hover, press_key, drag, scroll)
 2. **[`manage_tab`](#manage_tab)** - Tab management (create, close, refresh, activate, list, get_info)
-3. **[`browser_control`](#browser_control)** - Browser lifecycle (start, stop, list, get_state, reattach)
+3. **[`browser_control`](#browser_control)** - Browser lifecycle (start, stop, list, get_state, create_context, list_contexts, delete_context, grant_permissions, reset_permissions)
 4. **[`execute_cdp_command`](#execute_cdp_command)** - Direct Chrome DevTools Protocol access
+5. **[`navigate_page`](#navigate_page)** - Page navigation (navigate, go_back, go_forward, get_url, get_title, get_source, wait_load, wait_network_idle, set_viewport, get_info)
+6. **[`capture_media`](#capture_media)** - Screenshots and PDFs (screenshot, element_screenshot, generate_pdf, save_page_as_pdf, save_pdf)
+7. **[`execute_script`](#execute_script)** - Script execution (execute, evaluate, inject, get_console_logs)
+8. **[`manage_file`](#manage_file)** - File operations (upload, download, manage_downloads)
+9. **[`find_element`](#find_element)** - Element finding (find, find_all, query, wait_for, get_text, get_attribute, check_visibility, get_parent)
+10. **[`interact_page`](#interact_page)** - Page dialogs (handle_dialog, handle_alert)
 
 ---
 

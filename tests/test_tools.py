@@ -392,10 +392,20 @@ class TestUnifiedTools:
 
         unified_tool_names = [tool.name for tool in UNIFIED_TOOLS]
 
+        # Check for all 10 unified tools
         assert "interact_element" in unified_tool_names
         assert "manage_tab" in unified_tool_names
         assert "browser_control" in unified_tool_names
         assert "execute_cdp_command" in unified_tool_names
+        assert "navigate_page" in unified_tool_names
+        assert "capture_media" in unified_tool_names
+        assert "execute_script" in unified_tool_names
+        assert "manage_file" in unified_tool_names
+        assert "find_element" in unified_tool_names
+        assert "interact_page" in unified_tool_names
+
+        # Should have exactly 10 unified tools
+        assert len(UNIFIED_TOOLS) == 10
 
         # Unified tools should be in ALL_TOOLS
         all_tool_names = [tool.name for tool in ALL_TOOLS]
@@ -412,8 +422,9 @@ class TestUnifiedTools:
             assert schema["type"] == "object"
             assert "properties" in schema
 
-            # Unified tools should have an 'action' property
-            if tool.name in ["interact_element", "manage_tab", "browser_control"]:
+            # Unified tools should have an 'action' property (except execute_cdp_command)
+            if tool.name in ["interact_element", "manage_tab", "browser_control", "navigate_page", 
+                           "capture_media", "execute_script", "manage_file", "find_element", "interact_page"]:
                 assert "action" in schema["properties"]
                 assert "enum" in schema["properties"]["action"]
 

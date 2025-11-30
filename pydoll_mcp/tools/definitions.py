@@ -5,7 +5,7 @@ high-level tools that consolidate multiple granular operations.
 """
 
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -118,7 +118,7 @@ class BrowserControlInput(BaseModel):
     stealth_mode: Optional[bool] = Field(True, description="Enable stealth mode")
     proxy_server: Optional[str] = Field(None, description="Proxy server")
     user_agent: Optional[str] = Field(None, description="Custom user agent")
-    
+
     # Browser context and permissions fields
     context_name: Optional[str] = Field(None, description="Context name (for create_context action)")
     context_id: Optional[str] = Field(None, description="Context ID (for delete_context action)")

@@ -479,36 +479,30 @@ PyDoll MCP Server brings the groundbreaking capabilities of PyDoll to Claude, Op
 
 PyDoll MCP Server now features a streamlined **Unified Tools** architecture designed for better LLM usability:
 
-<<<<<<< HEAD
-- **4 Unified "Fat Tools"**: Consolidate ~20-30 common granular tools into powerful, action-based endpoints:
-=======
-- **4 Unified "Fat Tools"**: Consolidate ~60 granular tools into powerful, action-based endpoints:
->>>>>>> 38bf80dd80f87d61faa654c60d3fe056f753cbda
+- **10 Unified "Fat Tools"**: Consolidate ~50-60 common granular tools into powerful, action-based endpoints:
   - `interact_element` - Click, type, hover, press keys, drag, scroll
   - `manage_tab` - Create, close, refresh, activate, list tabs
-  - `browser_control` - Start, stop, list browsers, get state, reattach
+  - `browser_control` - Start, stop, list browsers, get state, create/list/delete contexts, grant/reset permissions
   - `execute_cdp_command` - Direct Chrome DevTools Protocol access
+  - `navigate_page` - Navigate, go back/forward, get URL/title/source, wait for load, set viewport
+  - `capture_media` - Screenshots, element screenshots, generate/save PDFs
+  - `execute_script` - Execute JavaScript, evaluate expressions, inject libraries, get console logs
+  - `manage_file` - Upload files, download files, manage downloads
+  - `find_element` - Find elements, query, wait for, get text/attributes, check visibility
+  - `interact_page` - Handle dialogs and alerts
 
 - **Session Persistence**: Browser and tab state persisted in SQLite for resilience and recovery
 - **Smart Error Handling**: Context-aware error responses with DOM snapshots and page context
 - **Stateless Design**: BrowserManager decoupled from state management for better scalability
 
-<<<<<<< HEAD
-**Important**: Unified tools replace a **subset** of tools (element interaction, tab management, browser control). Many tool categories remain as legacy tools:
-- ✅ Screenshot & Media tools (still use legacy)
-- ✅ Script Execution tools (still use legacy)
+**Important**: Unified tools replace a **subset** of tools (element interaction, element finding, tab management, browser control including context/permissions, navigation, screenshots/PDFs, script execution, file operations, page dialogs). Many tool categories remain as legacy tools:
 - ✅ Network Monitoring tools (still use legacy)
 - ✅ Protection & Stealth tools (still use legacy)
-- ✅ File Operations tools (still use legacy)
-- ✅ Element Finding tools (still use legacy)
-- ✅ Navigation tools (still use legacy)
+- ✅ Advanced automation tools (still use legacy)
 
 See [Unified Tools Coverage](docs/UNIFIED_TOOLS_COVERAGE.md) for complete details on what's replaced vs. what remains.
 
 **Legacy Tools**: All original granular tools remain available for backward compatibility and for operations not covered by unified tools.
-=======
-**Legacy Tools**: All original granular tools remain available for backward compatibility.
->>>>>>> 38bf80dd80f87d61faa654c60d3fe056f753cbda
 - **🔧 One-Click Setup**: Automatic Claude Desktop configuration
 - **🌍 Universal Compatibility**: Works on all systems including Korean Windows
 - **🎯 NEW v1.5.12**: Intelligent Tab Management with automatic ID detection and fallback mechanisms
