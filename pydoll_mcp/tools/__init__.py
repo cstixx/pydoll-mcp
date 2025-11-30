@@ -74,7 +74,7 @@ else:
 # Tool categories for organization
 TOOL_CATEGORIES = {
     "unified_tools": {
-        "description": "Unified 'Fat Tools' - Recommended for LLM usage. Consolidates ~20-30 common granular tools (element interaction, tab management, browser control) into 4 powerful endpoints. Other tool categories remain as legacy tools.",
+        "description": "Unified 'Fat Tools' - Recommended for LLM usage. Consolidates ~50-60 common granular tools (element interaction, element finding, tab management, browser control, navigation, screenshots/PDFs, script execution, file operations, page dialogs) into 10 powerful endpoints. Other tool categories remain as legacy tools.",
         "tools": [tool.name for tool in UNIFIED_TOOLS],
         "count": len(UNIFIED_TOOLS),
         "recommended": True
