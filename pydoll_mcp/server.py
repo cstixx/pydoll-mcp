@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """PyDoll MCP Server - Main Server Implementation.
 
 This module provides the core MCP server implementation for PyDoll browser automation.
@@ -601,7 +600,6 @@ def cli_main():
 
 if __name__ == "__main__":
     cli_main()
-=======
 """PyDoll MCP Server - Main Server Implementation.
 
 This module provides the core MCP server implementation for PyDoll browser automation.
