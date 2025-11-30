@@ -17,7 +17,7 @@ from mcp.types import Tool, TextContent
 from ..core import get_browser_manager
 from ..models import OperationResult
 
-logger = logging.getLogger(__name__)
+logger logger = logging.getLogger(__name__)
 
 # Script Tools Definition
 
@@ -320,7 +320,7 @@ SCRIPT_TOOL_HANDLERS = {
     "execute_automation_script": handle_execute_automation_script,
     "inject_script_library": handle_inject_script_library,
 }
-= logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # Script Tools Definition
 
