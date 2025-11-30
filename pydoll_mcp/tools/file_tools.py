@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """File and Data Management Tools for PyDoll MCP Server.
 
 This module provides MCP tools for file operations and data management including:
@@ -578,28 +577,7 @@ FILE_TOOL_HANDLERS = {
     "save_session": handle_save_session,
     "load_session": handle_load_session
 }
-=======
-"""File and Data Management Tools for PyDoll MCP Server.
-
-This module provides MCP tools for file operations and data management including:
-- File upload and download handling
-- Data extraction and export
-- Session management
-"""
-
-import logging
-from typing import Any, Dict, Sequence, List
-import json
-import os
-import time
-from datetime import datetime
-
-from mcp.types import Tool, TextContent
-
-from ..core import get_browser_manager
-from ..models import OperationResult
-
-logger = logging.getLogger(__name__)
+= logging.getLogger(__name__)
 
 # File Tools Definition
 

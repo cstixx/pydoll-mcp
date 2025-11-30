@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """Advanced Search Automation Tools for PyDoll MCP Server.
 
 This module provides intelligent search automation that can automatically:
@@ -398,26 +397,7 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
 SEARCH_AUTOMATION_TOOL_HANDLERS = {
     "intelligent_search": handle_intelligent_search,
 }
-=======
-"""Advanced Search Automation Tools for PyDoll MCP Server.
-
-This module provides intelligent search automation that can automatically:
-- Find search boxes on any website
-- Input search terms with human-like behavior
-- Execute searches by detecting the right submission method
-- Handle various search patterns (Google, Bing, DuckDuckGo, etc.)
-"""
-
-import asyncio
-import logging
-from typing import Any, Dict, List, Optional, Sequence
-
-from mcp.types import Tool, TextContent
-
-from ..core import get_browser_manager
-from ..models import OperationResult
-
-logger = logging.getLogger(__name__)
+= logging.getLogger(__name__)
 
 # Advanced Search Automation Tools Definition
 

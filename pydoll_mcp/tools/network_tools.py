@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """Network Monitoring and Control Tools for PyDoll MCP Server.
 
 This module provides MCP tools for network monitoring and manipulation including:
@@ -1620,27 +1619,7 @@ NETWORK_TOOL_HANDLERS = {
     "fulfill_request": handle_fulfill_request,
     "continue_with_auth": handle_continue_with_auth,
 }
-=======
-"""Network Monitoring and Control Tools for PyDoll MCP Server.
-
-This module provides MCP tools for network monitoring and manipulation including:
-- Request interception and modification
-- Response monitoring and extraction
-- Performance analysis
-- Cache and resource management
-"""
-
-import logging
-from typing import Any, Dict, Sequence, List
-import json
-import time
-
-from mcp.types import Tool, TextContent
-
-from ..core import get_browser_manager
-from ..models import OperationResult
-
-logger = logging.getLogger(__name__)
+= logging.getLogger(__name__)
 
 # Network Tools Definition
 

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """Advanced Tools for PyDoll MCP Server.
 
 This module provides advanced MCP tools for complex browser automation and analysis including:
@@ -348,30 +347,7 @@ ADVANCED_TOOL_HANDLERS = {
     "intercept_network_requests": handle_intercept_network_requests,
     "analyze_content_with_ai": handle_analyze_content_with_ai,
 }
-=======
-"""Advanced Tools for PyDoll MCP Server.
-
-This module provides advanced MCP tools for complex browser automation and analysis including:
-- Performance monitoring and analysis
-- Network request interception and modification
-- Advanced debugging and profiling
-- Multi-tab orchestration
-- AI-powered content analysis
-- Advanced data processing and export
-"""
-
-import json
-import logging
-import time
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Sequence
-
-from mcp.types import Tool, TextContent
-
-from ..core import get_browser_manager
-from ..models import OperationResult
-
-logger = logging.getLogger(__name__)
+= logging.getLogger(__name__)
 
 # Advanced Tools Definition
 

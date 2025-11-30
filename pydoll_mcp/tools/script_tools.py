@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """Script Execution and Automation Tools for PyDoll MCP Server.
 
 This module provides MCP tools for executing JavaScript and automation scripts including:
@@ -321,27 +320,7 @@ SCRIPT_TOOL_HANDLERS = {
     "execute_automation_script": handle_execute_automation_script,
     "inject_script_library": handle_inject_script_library,
 }
-=======
-"""Script Execution and Automation Tools for PyDoll MCP Server.
-
-This module provides MCP tools for executing JavaScript and automation scripts including:
-- JavaScript execution in browser context
-- Custom script automation
-- Page manipulation scripts
-- Data extraction scripts
-- Form automation scripts
-"""
-
-import json
-import logging
-from typing import Any, Dict, List, Sequence
-
-from mcp.types import Tool, TextContent
-
-from ..core import get_browser_manager
-from ..models import OperationResult
-
-logger = logging.getLogger(__name__)
+= logging.getLogger(__name__)
 
 # Script Tools Definition
 

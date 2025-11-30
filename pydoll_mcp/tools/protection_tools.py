@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """Protection and Stealth Tools for PyDoll MCP Server.
 
 This module provides MCP tools for anti-detection and protection bypass including:
@@ -819,29 +818,7 @@ PROTECTION_TOOL_HANDLERS = {
 
 # For backward compatibility
 import asyncio
-=======
-"""Protection and Stealth Tools for PyDoll MCP Server.
-
-This module provides MCP tools for anti-detection and protection bypass including:
-- Stealth mode and anti-detection features
-- Captcha bypass capabilities
-- Human behavior simulation
-- Fingerprint and user agent management
-"""
-
-import asyncio
-import logging
-from typing import Any, Dict, Sequence
-import json
-import random
-import time
-
-from mcp.types import Tool, TextContent
-
-from ..core import get_browser_manager
-from ..models import OperationResult
-
-logger = logging.getLogger(__name__)
+= logging.getLogger(__name__)
 
 # Protection Tools Definition
 
