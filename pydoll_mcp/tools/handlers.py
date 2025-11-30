@@ -7,6 +7,7 @@ high-level tools that consolidate multiple granular operations.
 import asyncio
 import json
 import logging
+import time
 from typing import Any, Dict, Sequence
 
 from mcp.types import TextContent
@@ -18,6 +19,7 @@ from .definitions import (
     BrowserAction,
     BrowserControlInput,
     CaptureMediaInput,
+    DialogAction,
     ElementAction,
     ElementFindAction,
     ExecuteCDPInput,
@@ -25,6 +27,7 @@ from .definitions import (
     FileAction,
     FindElementInput,
     InteractElementInput,
+    InteractPageInput,
     ManageFileInput,
     ManageTabInput,
     NavigatePageInput,
@@ -496,6 +499,237 @@ async def handle_browser_control(input_data: BrowserControlInput) -> Sequence[Te
                 }
             )
 
+        elif input_data.action == BrowserAction.CREATE_CONTEXT:
+            if not input_data.browser_id:
+                return [TextContent(type="text", text=OperationResult(
+                    success=False,
+                    error="BrowserIdRequired",
+                    message="browser_id is required for create_context action"
+                ).json())]
+
+            browser_instance = await browser_manager.get_browser(input_data.browser_id)
+            if not browser_instance:
+                return [TextContent(type="text", text=OperationResult(
+                    success=False,
+                    error="BrowserNotFound",
+                    message=f"Browser {input_data.browser_id} not found"
+                ).json())]
+
+            context_name = input_data.context_name
+            if hasattr(browser_instance.browser, 'create_browser_context'):
+                try:
+                    context = await browser_instance.browser.create_browser_context()
+                    context_id = getattr(context, 'id', str(context))
+                    if not hasattr(browser_instance, 'contexts'):
+                        browser_instance.contexts = {}
+                    browser_instance.contexts[context_id] = {
+                        "id": context_id,
+                        "name": context_name,
+                        "created_at": time.time()
+                    }
+                    result = OperationResult(
+                        success=True,
+                        message="Browser context created successfully",
+                        data={
+                            "browser_id": input_data.browser_id,
+                            "context_id": context_id,
+                            "context_name": context_name
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"PyDoll create_browser_context failed: {e}")
+                    result = OperationResult(
+                        success=False,
+                        error=str(e),
+                        message="Failed to create browser context - PyDoll API may not support this feature"
+                    )
+            else:
+                result = OperationResult(
+                    success=False,
+                    error="Browser context creation not supported",
+                    message="PyDoll browser does not support create_browser_context method"
+                )
+
+        elif input_data.action == BrowserAction.LIST_CONTEXTS:
+            if not input_data.browser_id:
+                return [TextContent(type="text", text=OperationResult(
+                    success=False,
+                    error="BrowserIdRequired",
+                    message="browser_id is required for list_contexts action"
+                ).json())]
+
+            browser_instance = await browser_manager.get_browser(input_data.browser_id)
+            if not browser_instance:
+                return [TextContent(type="text", text=OperationResult(
+                    success=False,
+                    error="BrowserNotFound",
+                    message=f"Browser {input_data.browser_id} not found"
+                ).json())]
+
+            contexts_list = []
+            if hasattr(browser_instance.browser, 'get_browser_contexts'):
+                try:
+                    contexts = await browser_instance.browser.get_browser_contexts()
+                    if isinstance(contexts, list):
+                        for ctx in contexts:
+                            context_id = getattr(ctx, 'id', str(ctx))
+                            contexts_list.append({
+                                "id": context_id,
+                                "name": getattr(ctx, 'name', None)
+                            })
+                    elif isinstance(contexts, dict):
+                        contexts_list = [{"id": k, "name": v} for k, v in contexts.items()]
+                except Exception as e:
+                    logger.warning(f"PyDoll get_browser_contexts failed: {e}")
+
+            if not contexts_list and hasattr(browser_instance, 'contexts') and browser_instance.contexts:
+                contexts_list = [
+                    {"id": ctx_id, "name": ctx_info.get("name")}
+                    for ctx_id, ctx_info in browser_instance.contexts.items()
+                ]
+
+            result = OperationResult(
+                success=True,
+                message=f"Found {len(contexts_list)} browser context(s)",
+                data={
+                    "browser_id": input_data.browser_id,
+                    "contexts": contexts_list,
+                    "count": len(contexts_list)
+                }
+            )
+
+        elif input_data.action == BrowserAction.DELETE_CONTEXT:
+            if not input_data.browser_id or not input_data.context_id:
+                return [TextContent(type="text", text=OperationResult(
+                    success=False,
+                    error="ParametersRequired",
+                    message="browser_id and context_id are required for delete_context action"
+                ).json())]
+
+            browser_instance = await browser_manager.get_browser(input_data.browser_id)
+            if not browser_instance:
+                return [TextContent(type="text", text=OperationResult(
+                    success=False,
+                    error="BrowserNotFound",
+                    message=f"Browser {input_data.browser_id} not found"
+                ).json())]
+
+            if hasattr(browser_instance.browser, 'delete_browser_context'):
+                try:
+                    await browser_instance.browser.delete_browser_context(input_data.context_id)
+                    if hasattr(browser_instance, 'contexts') and input_data.context_id in browser_instance.contexts:
+                        del browser_instance.contexts[input_data.context_id]
+                    result = OperationResult(
+                        success=True,
+                        message="Browser context deleted successfully",
+                        data={
+                            "browser_id": input_data.browser_id,
+                            "context_id": input_data.context_id
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"PyDoll delete_browser_context failed: {e}")
+                    result = OperationResult(
+                        success=False,
+                        error=str(e),
+                        message="Failed to delete browser context"
+                    )
+            else:
+                result = OperationResult(
+                    success=False,
+                    error="Browser context deletion not supported",
+                    message="PyDoll browser does not support delete_browser_context method"
+                )
+
+        elif input_data.action == BrowserAction.GRANT_PERMISSIONS:
+            if not input_data.browser_id or not input_data.origin or not input_data.permissions:
+                return [TextContent(type="text", text=OperationResult(
+                    success=False,
+                    error="ParametersRequired",
+                    message="browser_id, origin, and permissions are required for grant_permissions action"
+                ).json())]
+
+            browser_instance = await browser_manager.get_browser(input_data.browser_id)
+            if not browser_instance:
+                return [TextContent(type="text", text=OperationResult(
+                    success=False,
+                    error="BrowserNotFound",
+                    message=f"Browser {input_data.browser_id} not found"
+                ).json())]
+
+            if hasattr(browser_instance.browser, 'grant_permissions'):
+                try:
+                    await browser_instance.browser.grant_permissions(
+                        origin=input_data.origin,
+                        permissions=input_data.permissions
+                    )
+                    result = OperationResult(
+                        success=True,
+                        message="Permissions granted successfully",
+                        data={
+                            "browser_id": input_data.browser_id,
+                            "origin": input_data.origin,
+                            "permissions": input_data.permissions
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"PyDoll grant_permissions failed: {e}")
+                    result = OperationResult(
+                        success=False,
+                        error=str(e),
+                        message="Failed to grant permissions"
+                    )
+            else:
+                result = OperationResult(
+                    success=False,
+                    error="Grant permissions not supported",
+                    message="PyDoll browser does not support grant_permissions method"
+                )
+
+        elif input_data.action == BrowserAction.RESET_PERMISSIONS:
+            if not input_data.browser_id:
+                return [TextContent(type="text", text=OperationResult(
+                    success=False,
+                    error="BrowserIdRequired",
+                    message="browser_id is required for reset_permissions action"
+                ).json())]
+
+            browser_instance = await browser_manager.get_browser(input_data.browser_id)
+            if not browser_instance:
+                return [TextContent(type="text", text=OperationResult(
+                    success=False,
+                    error="BrowserNotFound",
+                    message=f"Browser {input_data.browser_id} not found"
+                ).json())]
+
+            if hasattr(browser_instance.browser, 'reset_permissions'):
+                try:
+                    if input_data.origin:
+                        await browser_instance.browser.reset_permissions(origin=input_data.origin)
+                    else:
+                        await browser_instance.browser.reset_permissions()
+                    result = OperationResult(
+                        success=True,
+                        message="Permissions reset successfully",
+                        data={
+                            "browser_id": input_data.browser_id,
+                            "origin": input_data.origin
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"PyDoll reset_permissions failed: {e}")
+                    result = OperationResult(
+                        success=False,
+                        error=str(e),
+                        message="Failed to reset permissions"
+                    )
+            else:
+                result = OperationResult(
+                    success=False,
+                    error="Reset permissions not supported",
+                    message="PyDoll browser does not support reset_permissions method"
+                )
+
         else:
             return [TextContent(type="text", text=OperationResult(
                 success=False,
@@ -772,6 +1006,70 @@ async def handle_capture_media(input_data: CaptureMediaInput) -> Sequence[TextCo
                 "include_background": input_data.include_background
             }
             return await handle_generate_pdf(args)
+
+        elif input_data.action == ScreenshotAction.SAVE_PAGE_AS_PDF:
+            # Save page as PDF (base64 encoded)
+            pdf_data = await tab.print_to_pdf(as_base64=True)
+            result = OperationResult(
+                success=True,
+                message="Page saved as PDF successfully",
+                data={
+                    "browser_id": input_data.browser_id,
+                    "tab_id": actual_tab_id,
+                    "pdf_data": pdf_data
+                }
+            )
+            return [TextContent(type="text", text=result.json())]
+
+        elif input_data.action == ScreenshotAction.SAVE_PDF:
+            # Save PDF with enhanced options and file saving support
+            import base64
+            import os
+            from pathlib import Path
+
+            pdf_format = input_data.pdf_format or "A4"
+            print_background = input_data.print_background if input_data.print_background is not None else True
+
+            # Generate PDF with options
+            pdf_data = await tab.print_to_pdf(
+                as_base64=True,
+                format=pdf_format,
+                print_background=print_background
+            )
+
+            result_data = {
+                "browser_id": input_data.browser_id,
+                "tab_id": actual_tab_id,
+                "format": pdf_format,
+                "print_background": print_background
+            }
+
+            # Save to file if path provided
+            if input_data.file_path:
+                try:
+                    pdf_path = Path(input_data.file_path)
+                    pdf_path.parent.mkdir(parents=True, exist_ok=True)
+                    pdf_bytes = base64.b64decode(pdf_data)
+                    with open(pdf_path, "wb") as f:
+                        f.write(pdf_bytes)
+                    result_data["file_path"] = str(pdf_path.absolute())
+                    result_data["file_size"] = len(pdf_bytes)
+                    message = f"Page saved as PDF to {input_data.file_path}"
+                except Exception as save_error:
+                    logger.error(f"Failed to save PDF to file: {save_error}")
+                    result_data["pdf_data"] = pdf_data
+                    result_data["save_error"] = str(save_error)
+                    message = "PDF generated but file save failed. PDF data returned as base64."
+            else:
+                result_data["pdf_data"] = pdf_data
+                message = "Page saved as PDF successfully (base64 encoded)."
+
+            result = OperationResult(
+                success=True,
+                message=message,
+                data=result_data
+            )
+            return [TextContent(type="text", text=result.json())]
 
         else:
             return [TextContent(type="text", text=OperationResult(
@@ -1122,6 +1420,78 @@ async def handle_find_element(input_data: FindElementInput) -> Sequence[TextCont
 
     except Exception as e:
         logger.error(f"Find element failed: {e}", exc_info=True)
+        return [TextContent(type="text", text=OperationResult(
+            success=False,
+            error=type(e).__name__,
+            message=str(e)
+        ).json())]
+
+
+@enrich_errors
+async def handle_interact_page(input_data: InteractPageInput) -> Sequence[TextContent]:
+    """Handle unified page interaction (dialogs).
+
+    Consolidates handle_dialog and handle_alert operations.
+    """
+    try:
+        browser_manager = get_browser_manager()
+        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(
+            input_data.browser_id, input_data.tab_id
+        )
+
+        # Check if dialog exists and get message
+        dialog_message = None
+        dialog_exists = False
+        try:
+            dialog_exists = await tab.has_dialog()
+            if dialog_exists:
+                dialog_message = await tab.get_dialog_message()
+        except Exception as e:
+            logger.debug(f"Could not check dialog state: {e}")
+
+        if input_data.action == DialogAction.HANDLE_DIALOG:
+            accept = input_data.accept if input_data.accept is not None else True
+            prompt_text = input_data.prompt_text
+            await tab.handle_dialog(accept=accept, prompt_text=prompt_text)
+            result = OperationResult(
+                success=True,
+                message="Dialog handled successfully",
+                data={
+                    "browser_id": input_data.browser_id,
+                    "tab_id": actual_tab_id,
+                    "accepted": accept,
+                    "prompt_text_entered": prompt_text,
+                    "dialog_message": dialog_message,
+                    "dialog_detected": dialog_exists
+                }
+            )
+
+        elif input_data.action == DialogAction.HANDLE_ALERT:
+            accept = input_data.accept if input_data.accept is not None else True
+            await tab.handle_dialog(accept=accept)
+            result = OperationResult(
+                success=True,
+                message="Alert handled successfully",
+                data={
+                    "browser_id": input_data.browser_id,
+                    "tab_id": actual_tab_id,
+                    "accepted": accept,
+                    "dialog_message": dialog_message,
+                    "dialog_detected": dialog_exists
+                }
+            )
+
+        else:
+            return [TextContent(type="text", text=OperationResult(
+                success=False,
+                error="UnsupportedAction",
+                message=f"Action {input_data.action} not yet implemented"
+            ).json())]
+
+        return [TextContent(type="text", text=result.json())]
+
+    except Exception as e:
+        logger.error(f"Interact page failed: {e}", exc_info=True)
         return [TextContent(type="text", text=OperationResult(
             success=False,
             error=type(e).__name__,

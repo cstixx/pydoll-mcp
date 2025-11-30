@@ -35,6 +35,11 @@ class BrowserAction(str, Enum):
     STOP = "stop"
     GET_STATE = "get_state"
     LIST = "list"
+    CREATE_CONTEXT = "create_context"
+    LIST_CONTEXTS = "list_contexts"
+    DELETE_CONTEXT = "delete_context"
+    GRANT_PERMISSIONS = "grant_permissions"
+    RESET_PERMISSIONS = "reset_permissions"
 
 
 class ElementSelector(BaseModel):
@@ -113,6 +118,12 @@ class BrowserControlInput(BaseModel):
     stealth_mode: Optional[bool] = Field(True, description="Enable stealth mode")
     proxy_server: Optional[str] = Field(None, description="Proxy server")
     user_agent: Optional[str] = Field(None, description="Custom user agent")
+    
+    # Browser context and permissions fields
+    context_name: Optional[str] = Field(None, description="Context name (for create_context action)")
+    context_id: Optional[str] = Field(None, description="Context ID (for delete_context action)")
+    origin: Optional[str] = Field(None, description="URL origin (for grant_permissions and reset_permissions actions)")
+    permissions: Optional[list] = Field(None, description="List of permissions (for grant_permissions action)")
 
 
 class ExecuteCDPInput(BaseModel):
@@ -158,6 +169,8 @@ class ScreenshotAction(str, Enum):
     SCREENSHOT = "screenshot"
     ELEMENT_SCREENSHOT = "element_screenshot"
     GENERATE_PDF = "generate_pdf"
+    SAVE_PAGE_AS_PDF = "save_page_as_pdf"
+    SAVE_PDF = "save_pdf"
 
 
 class CaptureMediaInput(BaseModel):
@@ -177,6 +190,8 @@ class CaptureMediaInput(BaseModel):
     pdf_format: Optional[str] = Field("A4", description="PDF format: A4, A3, A5, Letter, Legal, Tabloid")
     orientation: Optional[str] = Field("portrait", description="PDF orientation: portrait, landscape")
     include_background: Optional[bool] = Field(True, description="Include background in PDF")
+    file_path: Optional[str] = Field(None, description="File path to save PDF (for save_pdf action)")
+    print_background: Optional[bool] = Field(True, description="Print background graphics (for save_pdf action)")
 
 
 class ScriptAction(str, Enum):
@@ -252,4 +267,20 @@ class FindElementInput(BaseModel):
     wait_for_visible: Optional[bool] = Field(True, description="Wait for element to be visible")
     attribute_name: Optional[str] = Field(None, description="Attribute name for get_attribute action")
     search_shadow_dom: Optional[bool] = Field(False, description="Search within shadow DOM")
+
+
+class DialogAction(str, Enum):
+    """Page dialog interaction actions."""
+    HANDLE_DIALOG = "handle_dialog"
+    HANDLE_ALERT = "handle_alert"
+
+
+class InteractPageInput(BaseModel):
+    """Input model for unified page interaction tool (dialogs)."""
+
+    action: DialogAction = Field(description="Dialog action to perform")
+    browser_id: str = Field(description="Browser instance ID")
+    tab_id: Optional[str] = Field(None, description="Tab ID, uses active tab if not specified")
+    accept: Optional[bool] = Field(True, description="Whether to accept or dismiss the dialog")
+    prompt_text: Optional[str] = Field(None, description="Text to enter into prompt dialog (for handle_dialog action)")
 

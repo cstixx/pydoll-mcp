@@ -32,13 +32,18 @@ pydoll_mcp/
 
 ### Design Philosophy
 
+<<<<<<< HEAD
 The unified tools ("Fat Tools") consolidate **a subset** of granular tools into 4 powerful endpoints. They focus on the most common operations: element interaction, tab management, and browser control.
+=======
+The unified tools ("Fat Tools") consolidate ~60 granular tools into 4 powerful endpoints:
+>>>>>>> 38bf80dd80f87d61faa654c60d3fe056f753cbda
 
 1. **`interact_element`** - Element interactions (click, type, hover, press_key, drag, scroll)
 2. **`manage_tab`** - Tab management (create, close, refresh, activate, list, get_info)
 3. **`browser_control`** - Browser lifecycle (start, stop, list, get_state, reattach)
 4. **`execute_cdp_command`** - Direct Chrome DevTools Protocol access
 
+<<<<<<< HEAD
 ### What They Replace
 
 Unified tools replace approximately **20-30 legacy tools** in these categories:
@@ -66,6 +71,14 @@ See [Unified Tools Coverage](UNIFIED_TOOLS_COVERAGE.md) for complete details.
 - **Action-Based API**: Clear action parameter instead of separate tools
 - **Better Error Context**: Unified error handling with rich context
 - **Backward Compatibility**: Legacy tools remain available for all other operations
+=======
+### Benefits
+
+- **Reduced Tool Count**: From ~60 to 4 primary tools for LLMs
+- **Action-Based API**: Clear action parameter instead of separate tools
+- **Better Error Context**: Unified error handling with rich context
+- **Backward Compatibility**: Legacy tools remain available
+>>>>>>> 38bf80dd80f87d61faa654c60d3fe056f753cbda
 
 ### Example Usage
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Unified tools **do NOT replace all tools**. They consolidate a subset of related tools into 9 powerful endpoints. Many tool categories remain as legacy tools.
+Unified tools **do NOT replace all tools**. They consolidate a subset of related tools into 10 powerful endpoints. Many tool categories remain as legacy tools.
 
 ## What Unified Tools Replace
 
@@ -38,11 +38,11 @@ Unified tools **do NOT replace all tools**. They consolidate a subset of related
 - `stop_browser`
 - `list_browsers`
 - `get_browser_status`
-- `create_browser_context` (logical consolidation - browser configuration)
-- `list_browser_contexts` (logical consolidation - browser configuration)
-- `delete_browser_context` (logical consolidation - browser configuration)
-- `grant_permissions` (logical consolidation - browser configuration)
-- `reset_permissions` (logical consolidation - browser configuration)
+- `create_browser_context`
+- `list_browser_contexts`
+- `delete_browser_context`
+- `grant_permissions`
+- `reset_permissions`
 
 **Does NOT replace:**
 - `set_download_behavior`
@@ -74,8 +74,8 @@ Unified tools **do NOT replace all tools**. They consolidate a subset of related
 - `take_screenshot`
 - `take_element_screenshot`
 - `generate_pdf`
-- `save_page_as_pdf` (logical consolidation - PDF generation)
-- `save_pdf` (logical consolidation - PDF generation)
+- `save_page_as_pdf`
+- `save_pdf`
 
 **Does NOT replace:**
 - `save_page_content` (if exists)
@@ -123,6 +123,16 @@ Unified tools **do NOT replace all tools**. They consolidate a subset of related
 **Does NOT replace:**
 - `select_option` (still available as legacy)
 
+### 10. `interact_page` - Replaces Page Interaction Tools
+**Replaces:**
+- `handle_dialog`
+- `handle_alert`
+
+**Does NOT replace:**
+- `save_page_as_pdf` (now part of `capture_media`)
+- `save_pdf` (now part of `capture_media`)
+- `select_option` (still available as legacy)
+
 ## What Remains as Legacy Tools
 
 ### ✅ Still Available (Not Replaced)
@@ -140,7 +150,6 @@ Unified tools **do NOT replace all tools**. They consolidate a subset of related
    - `inject_script_library`
 
 4. **Page Interaction Tools** (Legacy)
-   - `handle_dialog` / `handle_alert` (could be consolidated - both handle dialogs)
    - `select_option` (if exists)
 
 5. **Network Monitoring Tools** (Active)
@@ -200,28 +209,14 @@ Unified tools **do NOT replace all tools**. They consolidate a subset of related
 
 | Category | Status | Count |
 |----------|--------|-------|
-| **Unified Tools** | ⭐ Recommended | 9 |
-| **Replaced by Unified** | Legacy (deprecated) | ~40-50 |
+| **Unified Tools** | ⭐ Recommended | 10 |
+| **Replaced by Unified** | Legacy (deprecated) | ~50-60 |
 | **Still Active** | Available | ~20-30 |
-| **Consolidation Opportunities** | Could be unified | ~5-10 |
 
 ## Recommendation
 
-- **Use Unified Tools** for: element interactions, element finding, tab management, browser lifecycle, navigation, screenshots/PDFs, script execution, file operations
-- **Use Legacy Tools** for: specialized operations (network monitoring, protection/stealth, advanced features, browser context, etc.)
-
-## Logical Consolidation Opportunities
-
-The following legacy tools could be logically consolidated into existing unified tools:
-
-1. **PDF Tools** → `capture_media`
-   - `save_page_as_pdf` and `save_pdf` are PDF-related and could be added as actions to `capture_media` (which already has `generate_pdf`)
-
-2. **Dialog Handling** → New unified tool or `interact_element`
-   - `handle_dialog` and `handle_alert` are very similar (handle_alert is a simplified version) and could be consolidated into a single page interaction tool
-
-3. **Browser Context & Permissions** → `browser_control`
-   - `create_browser_context`, `list_browser_contexts`, `delete_browser_context`, `grant_permissions`, `reset_permissions` are all browser configuration operations and could logically be part of `browser_control`
+- **Use Unified Tools** for: element interactions, element finding, tab management, browser lifecycle (including context/permissions), navigation, screenshots/PDFs, script execution, file operations, page dialogs
+- **Use Legacy Tools** for: specialized operations (network monitoring, protection/stealth, advanced features, etc.)
 
 ## Future Plans
 
@@ -229,7 +224,6 @@ Future versions may add more unified tools to consolidate:
 - Network monitoring operations
 - Protection/stealth operations
 - Advanced automation features
-- Page interaction operations (dialogs, alerts)
 
-The current unified tools cover the most common operations: element interaction, element finding, tab management, browser control, navigation, screenshots/PDFs, script execution, and file operations.
+The current unified tools cover the most common operations: element interaction, element finding, tab management, browser control (including context/permissions), navigation, screenshots/PDFs, script execution, file operations, and page dialogs.
 

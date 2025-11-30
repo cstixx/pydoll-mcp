@@ -479,7 +479,11 @@ PyDoll MCP Server brings the groundbreaking capabilities of PyDoll to Claude, Op
 
 PyDoll MCP Server now features a streamlined **Unified Tools** architecture designed for better LLM usability:
 
+<<<<<<< HEAD
 - **4 Unified "Fat Tools"**: Consolidate ~20-30 common granular tools into powerful, action-based endpoints:
+=======
+- **4 Unified "Fat Tools"**: Consolidate ~60 granular tools into powerful, action-based endpoints:
+>>>>>>> 38bf80dd80f87d61faa654c60d3fe056f753cbda
   - `interact_element` - Click, type, hover, press keys, drag, scroll
   - `manage_tab` - Create, close, refresh, activate, list tabs
   - `browser_control` - Start, stop, list browsers, get state, reattach
@@ -489,6 +493,7 @@ PyDoll MCP Server now features a streamlined **Unified Tools** architecture desi
 - **Smart Error Handling**: Context-aware error responses with DOM snapshots and page context
 - **Stateless Design**: BrowserManager decoupled from state management for better scalability
 
+<<<<<<< HEAD
 **Important**: Unified tools replace a **subset** of tools (element interaction, tab management, browser control). Many tool categories remain as legacy tools:
 - ✅ Screenshot & Media tools (still use legacy)
 - ✅ Script Execution tools (still use legacy)
@@ -501,6 +506,9 @@ PyDoll MCP Server now features a streamlined **Unified Tools** architecture desi
 See [Unified Tools Coverage](docs/UNIFIED_TOOLS_COVERAGE.md) for complete details on what's replaced vs. what remains.
 
 **Legacy Tools**: All original granular tools remain available for backward compatibility and for operations not covered by unified tools.
+=======
+**Legacy Tools**: All original granular tools remain available for backward compatibility.
+>>>>>>> 38bf80dd80f87d61faa654c60d3fe056f753cbda
 - **🔧 One-Click Setup**: Automatic Claude Desktop configuration
 - **🌍 Universal Compatibility**: Works on all systems including Korean Windows
 - **🎯 NEW v1.5.12**: Intelligent Tab Management with automatic ID detection and fallback mechanisms

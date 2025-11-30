@@ -9,6 +9,7 @@ from .definitions import (
     BrowserAction,
     BrowserControlInput,
     CaptureMediaInput,
+    DialogAction,
     ElementAction,
     ElementFindAction,
     ExecuteCDPInput,
@@ -16,6 +17,7 @@ from .definitions import (
     FileAction,
     FindElementInput,
     InteractElementInput,
+    InteractPageInput,
     ManageFileInput,
     ManageTabInput,
     NavigatePageInput,
@@ -31,6 +33,7 @@ from .handlers import (
     handle_execute_script,
     handle_find_element,
     handle_interact_element,
+    handle_interact_page,
     handle_manage_file,
     handle_manage_tab,
     handle_navigate_page,
@@ -168,14 +171,14 @@ def create_unified_tools() -> list[Tool]:
     # Browser Control Tool
     tools.append(Tool(
         name="browser_control",
-        description="⭐ RECOMMENDED: Unified browser control tool. Handles start, stop, get_state, and list operations. Replaces multiple legacy browser tools.",
+        description="⭐ RECOMMENDED: Unified browser control tool. Handles start, stop, get_state, list, create_context, list_contexts, delete_context, grant_permissions, and reset_permissions operations. Replaces multiple legacy browser tools.",
         inputSchema={
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
                     "enum": [action.value for action in BrowserAction],
-                    "description": "Action to perform: start, stop, get_state, list"
+                    "description": "Action to perform: start, stop, get_state, list, create_context, list_contexts, delete_context, grant_permissions, reset_permissions"
                 },
                 "browser_id": {
                     "type": "string",
@@ -218,6 +221,23 @@ def create_unified_tools() -> list[Tool]:
                 "user_agent": {
                     "type": "string",
                     "description": "Custom user agent (for start action)"
+                },
+                "context_name": {
+                    "type": "string",
+                    "description": "Context name (for create_context action)"
+                },
+                "context_id": {
+                    "type": "string",
+                    "description": "Context ID (for delete_context action)"
+                },
+                "origin": {
+                    "type": "string",
+                    "description": "URL origin (for grant_permissions and reset_permissions actions)"
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of permissions (for grant_permissions action)"
                 }
             },
             "required": ["action"]
@@ -313,14 +333,14 @@ def create_unified_tools() -> list[Tool]:
     # Capture Media Tool
     tools.append(Tool(
         name="capture_media",
-        description="⭐ RECOMMENDED: Unified screenshot and media capture tool. Handles screenshot, element_screenshot, and generate_pdf operations. Replaces multiple legacy screenshot tools.",
+        description="⭐ RECOMMENDED: Unified screenshot and media capture tool. Handles screenshot, element_screenshot, generate_pdf, save_page_as_pdf, and save_pdf operations. Replaces multiple legacy screenshot and PDF tools.",
         inputSchema={
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
                     "enum": [action.value for action in ScreenshotAction],
-                    "description": "Action to perform: screenshot, element_screenshot, generate_pdf"
+                    "description": "Action to perform: screenshot, element_screenshot, generate_pdf, save_page_as_pdf, save_pdf"
                 },
                 "browser_id": {
                     "type": "string",
@@ -381,6 +401,15 @@ def create_unified_tools() -> list[Tool]:
                     "type": "boolean",
                     "default": True,
                     "description": "Include background in PDF"
+                },
+                "file_path": {
+                    "type": "string",
+                    "description": "File path to save PDF (for save_pdf action)"
+                },
+                "print_background": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Print background graphics (for save_pdf action)"
                 }
             },
             "required": ["action", "browser_id"]
@@ -510,6 +539,74 @@ def create_unified_tools() -> list[Tool]:
         }
     ))
 
+    # Interact Page Tool (Dialogs)
+    tools.append(Tool(
+        name="interact_page",
+        description="⭐ RECOMMENDED: Unified page interaction tool. Handles handle_dialog and handle_alert operations. Replaces multiple legacy page interaction tools.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [action.value for action in DialogAction],
+                    "description": "Action to perform: handle_dialog, handle_alert"
+                },
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Tab ID, uses active tab if not specified"
+                },
+                "accept": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Whether to accept or dismiss the dialog"
+                },
+                "prompt_text": {
+                    "type": "string",
+                    "description": "Text to enter into prompt dialog (for handle_dialog action)"
+                }
+            },
+            "required": ["action", "browser_id"]
+        }
+    ))
+
+    # Interact Page Tool (Dialogs)
+    tools.append(Tool(
+        name="interact_page",
+        description="⭐ RECOMMENDED: Unified page interaction tool. Handles handle_dialog and handle_alert operations. Replaces multiple legacy page interaction tools.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [action.value for action in DialogAction],
+                    "description": "Action to perform: handle_dialog, handle_alert"
+                },
+                "browser_id": {
+                    "type": "string",
+                    "description": "Browser instance ID"
+                },
+                "tab_id": {
+                    "type": "string",
+                    "description": "Tab ID, uses active tab if not specified"
+                },
+                "accept": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Whether to accept or dismiss the dialog"
+                },
+                "prompt_text": {
+                    "type": "string",
+                    "description": "Text to enter into prompt dialog (for handle_dialog action)"
+                }
+            },
+            "required": ["action", "browser_id"]
+        }
+    ))
+
     # Find Element Tool
     tools.append(Tool(
         name="find_element",
@@ -605,5 +702,6 @@ def create_unified_handlers() -> dict[str, callable]:
         "execute_script": lambda args: wrap_handler(handle_execute_script, ExecuteScriptInput, args),
         "manage_file": lambda args: wrap_handler(handle_manage_file, ManageFileInput, args),
         "find_element": lambda args: wrap_handler(handle_find_element, FindElementInput, args),
+        "interact_page": lambda args: wrap_handler(handle_interact_page, InteractPageInput, args),
     }
 
