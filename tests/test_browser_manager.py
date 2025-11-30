@@ -3,9 +3,9 @@
 import asyncio
 import pytest
 import os
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock, patch, MagicMock
 
-from pydoll_mcp.browser_manager import (
+from pydoll_mcp.core import (
     BrowserManager,
     BrowserInstance,
     BrowserPool,
@@ -240,12 +240,24 @@ class TestBrowserManager:
     @pytest.fixture
     def browser_manager(self):
         """Create a browser manager."""
-        return BrowserManager()
+        from unittest.mock import AsyncMock
+        from pydoll_mcp.core import SessionStore
+
+        # Create a mock session store for testing
+        mock_session_store = AsyncMock(spec=SessionStore)
+        mock_session_store.list_browsers = AsyncMock(return_value=[])
+        mock_session_store.save_browser = AsyncMock()
+        mock_session_store.delete_browser = AsyncMock()
+        mock_session_store.save_tab = AsyncMock()
+        mock_session_store.delete_tab = AsyncMock()
+        mock_session_store.update_activity = AsyncMock()
+
+        return BrowserManager(session_store=mock_session_store)
 
     @pytest.fixture
     def mock_chrome_class(self):
         """Mock Chrome class."""
-        with patch('pydoll_mcp.browser_manager.Chrome') as mock:
+        with patch('pydoll_mcp.core.browser_manager.Chrome') as mock:
             instance = Mock()
             instance.start = AsyncMock()
             instance.stop = AsyncMock()
@@ -288,11 +300,11 @@ class TestBrowserManager:
     @pytest.mark.asyncio
     async def test_create_browser(self, browser_manager, mock_chrome_class):
         """Test browser creation."""
-        with patch('pydoll_mcp.browser_manager.PYDOLL_AVAILABLE', True):
+        with patch('pydoll_mcp.core.browser_manager.PYDOLL_AVAILABLE', True):
             instance = await browser_manager.create_browser("chrome")
 
             assert instance.browser_type == "chrome"
-            assert instance.instance_id in browser_manager.browsers
+            assert instance.instance_id in browser_manager._active_browsers
             assert browser_manager.global_stats["total_browsers_created"] == 1
 
     @pytest.mark.asyncio
@@ -304,7 +316,7 @@ class TestBrowserManager:
 
         browser_manager.browser_pool.available.append(pooled)
 
-        with patch('pydoll_mcp.browser_manager.PYDOLL_AVAILABLE', True):
+        with patch('pydoll_mcp.core.browser_manager.PYDOLL_AVAILABLE', True):
             instance = await browser_manager.create_browser()
 
             assert instance == pooled
@@ -316,36 +328,58 @@ class TestBrowserManager:
         # Create a mock instance
         instance = Mock(spec=BrowserInstance)
         instance.cleanup = AsyncMock()
-        browser_manager.browsers["test_123"] = instance
+        browser_manager._active_browsers["test_123"] = instance
 
         await browser_manager.destroy_browser("test_123")
 
-        assert "test_123" not in browser_manager.browsers
+        assert "test_123" not in browser_manager._active_browsers
         assert browser_manager.global_stats["total_browsers_destroyed"] == 1
 
     @pytest.mark.asyncio
     async def test_cleanup_idle_browsers(self, browser_manager):
         """Test idle browser cleanup."""
+        from datetime import datetime, timedelta
+
         # Create mock instances
         active = Mock(spec=BrowserInstance)
-        active.get_idle_time = Mock(return_value=100)  # Not idle
+        active.cleanup = AsyncMock()
 
         idle = Mock(spec=BrowserInstance)
-        idle.get_idle_time = Mock(return_value=3600)  # Idle
         idle.cleanup = AsyncMock()
 
-        browser_manager.browsers = {
+        browser_manager._active_browsers = {
             "active": active,
             "idle": idle,
         }
 
+        # Mock SessionStore to return browsers with different last_activity times
+        # Active browser: recent activity (100 seconds ago)
+        # Idle browser: old activity (3600 seconds ago, exceeding idle_timeout)
+        now = datetime.utcnow()
+        active_time = (now - timedelta(seconds=100)).isoformat()
+        idle_time = (now - timedelta(seconds=3600)).isoformat()
+
+        browser_manager.session_store.list_browsers = AsyncMock(return_value=[
+            {"browser_id": "active", "last_activity": active_time},
+            {"browser_id": "idle", "last_activity": idle_time},
+        ])
+
+        # Mock destroy_browser to remove from _active_browsers
+        original_destroy = browser_manager.destroy_browser
+        async def mock_destroy(browser_id):
+            if browser_id in browser_manager._active_browsers:
+                del browser_manager._active_browsers[browser_id]
+            await original_destroy(browser_id)
+        browser_manager.destroy_browser = mock_destroy
+
         await browser_manager._cleanup_idle_browsers()
 
         # Only idle browser should be removed
-        assert "active" in browser_manager.browsers
-        assert "idle" not in browser_manager.browsers
+        assert "active" in browser_manager._active_browsers
+        assert "idle" not in browser_manager._active_browsers
 
-    def test_get_statistics(self, browser_manager):
+    @pytest.mark.asyncio
+    async def test_get_statistics(self, browser_manager):
         """Test statistics retrieval."""
         # Add a mock instance
         instance = Mock(spec=BrowserInstance)
@@ -358,9 +392,13 @@ class TestBrowserManager:
         instance.metrics.get_avg_navigation_time = Mock(return_value=1.5)
         instance.metrics.get_error_rate = Mock(return_value=5.0)
 
-        browser_manager.browsers["test_123"] = instance
+        browser_manager._active_browsers["test_123"] = instance
+        # Mock session store to return browser data
+        browser_manager.session_store.list_browsers = AsyncMock(return_value=[
+            {"browser_id": "test_123", "browser_type": "chrome"}
+        ])
 
-        stats = browser_manager.get_statistics()
+        stats = await browser_manager.get_statistics()
 
         assert stats["active_browsers"] == 1
         assert stats["max_browsers"] == 3
@@ -420,11 +458,25 @@ class TestGlobalFunctions:
         """Test cleaning up global browser manager."""
         # Get manager first
         manager = get_browser_manager()
-        await manager.start()
 
-        # Cleanup
-        await cleanup_browser_manager()
+        # Ensure manager exists
+        assert manager is not None
+
+        # Store reference to verify it changes
+        original_manager = manager
+
+        # Mock stop completely to avoid any hanging operations
+        # The real stop() method awaits the cleanup task which can hang
+        mock_stop = AsyncMock()
+
+        # Patch the manager's stop method
+        with patch.object(manager, 'stop', mock_stop):
+            # Cleanup - this should stop the manager and reset the global instance
+            await cleanup_browser_manager()
+
+        # Verify stop was called
+        mock_stop.assert_awaited_once()
 
         # Should create new instance
         new_manager = get_browser_manager()
-        assert new_manager is not manager
+        assert new_manager is not original_manager

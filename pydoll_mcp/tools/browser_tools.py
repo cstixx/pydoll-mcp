@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Sequence
 
 from mcp.types import Tool, TextContent
 
-from ..browser_manager import get_browser_manager
+from ..core import get_browser_manager
 from ..models import BrowserConfig, BrowserInstance, BrowserStatus, OperationResult
 
 logger = logging.getLogger(__name__)
@@ -503,12 +503,27 @@ async def handle_stop_browser(arguments: Dict[str, Any]) -> Sequence[TextContent
 # Placeholder handlers for remaining browser tools
 async def handle_list_browsers(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle list browsers request."""
-    from pydoll_mcp.browser_manager import browser_manager
+    from pydoll_mcp.core import get_browser_manager
+    browser_manager = get_browser_manager()
 
     try:
+        # Get browsers from SessionStore
+        active_browsers = await browser_manager.session_store.list_browsers(active_only=True)
         browsers_info = []
-        for browser_id, instance in browser_manager.browsers.items():
-            browsers_info.append(instance.to_dict())
+        for browser_data in active_browsers:
+            browser_id = browser_data["browser_id"]
+            # Try to get instance from active cache
+            instance = browser_manager._active_browsers.get(browser_id)
+            if instance:
+                browsers_info.append(instance.to_dict())
+            else:
+                # Browser exists in store but not in cache
+                browsers_info.append({
+                    "instance_id": browser_id,
+                    "browser_type": browser_data.get("browser_type", "unknown"),
+                    "status": "not_attached",
+                    **browser_data
+                })
 
         result = OperationResult(
             success=True,
@@ -532,7 +547,8 @@ async def handle_list_browsers(arguments: Dict[str, Any]) -> Sequence[TextConten
 
 async def handle_get_browser_status(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle get browser status request."""
-    from pydoll_mcp.browser_manager import browser_manager
+    from pydoll_mcp.core import get_browser_manager
+    browser_manager = get_browser_manager()
 
     browser_id = arguments.get("browser_id")
     if not browser_id:
@@ -544,7 +560,7 @@ async def handle_get_browser_status(arguments: Dict[str, Any]) -> Sequence[TextC
         return [TextContent(type="text", text=result.json())]
 
     try:
-        instance = browser_manager.browsers.get(browser_id)
+        instance = await browser_manager.get_browser(browser_id)
         if not instance:
             result = OperationResult(
                 success=False,
@@ -571,7 +587,7 @@ async def handle_get_browser_status(arguments: Dict[str, Any]) -> Sequence[TextC
 async def handle_new_tab(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle new tab creation request."""
     import uuid
-    from ..browser_manager import get_browser_manager
+    from ..core import get_browser_manager
 
     try:
         browser_id = arguments.get("browser_id")
@@ -644,7 +660,7 @@ async def handle_new_tab(arguments: Dict[str, Any]) -> Sequence[TextContent]:
 
 async def handle_close_tab(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle tab close request."""
-    from ..browser_manager import get_browser_manager
+    from ..core import get_browser_manager
 
     try:
         browser_id = arguments.get("browser_id")
@@ -692,7 +708,7 @@ async def handle_close_tab(arguments: Dict[str, Any]) -> Sequence[TextContent]:
 
 async def handle_list_tabs(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle list tabs request."""
-    from ..browser_manager import get_browser_manager
+    from ..core import get_browser_manager
 
     try:
         browser_id = arguments.get("browser_id")
@@ -769,7 +785,7 @@ async def handle_list_tabs(arguments: Dict[str, Any]) -> Sequence[TextContent]:
 
 async def handle_set_active_tab(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle set active tab request."""
-    from ..browser_manager import get_browser_manager
+    from ..core import get_browser_manager
 
     try:
         browser_id = arguments.get("browser_id")

@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Sequence
 
 from mcp.types import Tool, TextContent
 
-from ..browser_manager import get_browser_manager
+from ..core import get_browser_manager
 from ..models import ElementSelector, ElementInfo, InteractionResult, OperationResult
 
 logger = logging.getLogger(__name__)

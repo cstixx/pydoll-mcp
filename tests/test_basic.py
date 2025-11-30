@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from pydoll_mcp import __version__, health_check, get_package_info
 from pydoll_mcp.server import PyDollMCPServer
-from pydoll_mcp.browser_manager import BrowserManager
+from pydoll_mcp.core import BrowserManager
 from pydoll_mcp.models import BrowserConfig, OperationResult
 
 
@@ -56,13 +56,25 @@ class TestBrowserManager:
     @pytest.fixture
     def browser_manager(self):
         """Create browser manager instance for testing."""
-        return BrowserManager()
+        from unittest.mock import AsyncMock
+        from pydoll_mcp.core import SessionStore
+
+        # Create a mock session store for testing
+        mock_session_store = AsyncMock(spec=SessionStore)
+        mock_session_store.list_browsers = AsyncMock(return_value=[])
+        mock_session_store.save_browser = AsyncMock()
+        mock_session_store.delete_browser = AsyncMock()
+        mock_session_store.save_tab = AsyncMock()
+        mock_session_store.delete_tab = AsyncMock()
+        mock_session_store.update_activity = AsyncMock()
+
+        return BrowserManager(session_store=mock_session_store)
 
     @pytest.mark.asyncio
     async def test_browser_manager_initialization(self, browser_manager):
         """Test browser manager initializes correctly."""
         assert browser_manager is not None
-        assert browser_manager.browsers == {}
+        assert browser_manager._active_browsers == {}
 
     @pytest.mark.asyncio
     async def test_browser_config_creation(self):
@@ -78,7 +90,7 @@ class TestBrowserManager:
         assert "--no-sandbox" in config.custom_args
 
     @pytest.mark.asyncio
-    @patch('pydoll_mcp.browser_manager.Chrome')
+    @patch('pydoll_mcp.core.browser_manager.Chrome')
     async def test_start_browser_success(self, mock_chrome, browser_manager):
         """Test successful browser start."""
         # Mock PyDoll Chrome browser
@@ -92,7 +104,7 @@ class TestBrowserManager:
         instance = await browser_manager.create_browser("chrome", headless=True)
 
         assert instance.instance_id is not None
-        assert instance.instance_id in browser_manager.browsers
+        assert instance.instance_id in browser_manager._active_browsers
         mock_chrome.assert_called_once()
 
     @pytest.mark.asyncio
@@ -275,8 +287,21 @@ class TestIntegrationScenarios:
     """Integration test scenarios."""
 
     @pytest.mark.asyncio
-    async def test_basic_server_lifecycle(self):
+    @patch('pydoll_mcp.server.SessionStore')
+    @patch('pydoll_mcp.server.get_browser_manager')
+    async def test_basic_server_lifecycle(self, mock_get_browser_manager, mock_session_store_class):
         """Test basic server lifecycle."""
+        # Mock SessionStore
+        mock_session_store = AsyncMock()
+        mock_session_store.list_browsers = AsyncMock(return_value=[])
+        mock_session_store.close = AsyncMock()
+        mock_session_store_class.return_value = mock_session_store
+
+        # Mock browser manager
+        mock_browser_manager = AsyncMock()
+        mock_browser_manager.cleanup_all = AsyncMock()
+        mock_get_browser_manager.return_value = mock_browser_manager
+
         server = PyDollMCPServer("integration-test")
 
         # Test initialization
@@ -286,11 +311,16 @@ class TestIntegrationScenarios:
         # Test cleanup
         await server.cleanup()
         assert server.is_running is False
+        mock_browser_manager.cleanup_all.assert_called_once()
+        mock_session_store.close.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch('pydoll_mcp.browser_manager.Chrome')
+    @patch('pydoll_mcp.core.browser_manager.Chrome')
     async def test_browser_automation_flow(self, mock_chrome):
         """Test basic browser automation flow."""
+        from unittest.mock import AsyncMock
+        from pydoll_mcp.core import SessionStore
+
         # Mock browser and tab
         mock_browser = AsyncMock()
         mock_tab = AsyncMock()
@@ -299,8 +329,17 @@ class TestIntegrationScenarios:
         mock_browser.start = AsyncMock(return_value=mock_tab)
         mock_chrome.return_value = mock_browser
 
+        # Create a mock session store for testing
+        mock_session_store = AsyncMock(spec=SessionStore)
+        mock_session_store.list_browsers = AsyncMock(return_value=[])
+        mock_session_store.save_browser = AsyncMock()
+        mock_session_store.delete_browser = AsyncMock()
+        mock_session_store.save_tab = AsyncMock()
+        mock_session_store.delete_tab = AsyncMock()
+        mock_session_store.update_activity = AsyncMock()
+
         # Test the flow
-        browser_manager = BrowserManager()
+        browser_manager = BrowserManager(session_store=mock_session_store)
         # Mock _ensure_tab_ready
         browser_manager._ensure_tab_ready = AsyncMock()
 

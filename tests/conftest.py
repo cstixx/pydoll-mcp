@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock
 # Add the parent directory to sys.path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from pydoll_mcp.browser_manager import BrowserManager
+from pydoll_mcp.core import BrowserManager
 from pydoll_mcp.server import PyDollMCPServer
 
 
@@ -55,7 +55,7 @@ def pytest_collection_modifyitems(config, items):
         for item in items:
             if "integration" in item.keywords:
                 item.add_marker(skip_integration)
-    
+
     # Skip browser tests if no browser available
     if not _is_browser_available():
         skip_browser = pytest.mark.skip(reason="Browser not available")
@@ -128,7 +128,7 @@ def mock_tab():
 def mock_browser_manager():
     """Create a mock browser manager."""
     manager = AsyncMock(spec=BrowserManager)
-    manager.browsers = {}
+    manager._active_browsers = {}
     manager.start_browser = AsyncMock(return_value="test-browser-id")
     manager.stop_browser = AsyncMock(return_value=True)
     manager.new_tab = AsyncMock(return_value="test-tab-id")
@@ -145,12 +145,12 @@ def mock_browser_manager():
 async def test_server():
     """Create a test PyDoll MCP Server instance."""
     server = PyDollMCPServer("test-server")
-    
+
     # Mock the browser manager to avoid real browser instances
     with pytest.mock.patch('pydoll_mcp.server.get_browser_manager') as mock_get_manager:
         mock_manager = AsyncMock()
         mock_get_manager.return_value = mock_manager
-        
+
         await server.initialize()
         yield server
         await server.cleanup()
@@ -162,7 +162,7 @@ async def real_browser_manager() -> AsyncGenerator[BrowserManager, None]:
     """Create a real browser manager for integration tests."""
     if not _is_browser_available():
         pytest.skip("Browser not available for integration testing")
-    
+
     manager = BrowserManager()
     yield manager
     await manager.cleanup_all()
@@ -173,15 +173,15 @@ async def browser_session(real_browser_manager, request):
     """Create a browser session for testing."""
     browser_type = request.config.getoption("--browser-type")
     headless = request.config.getoption("--headless")
-    
+
     browser_id = await real_browser_manager.start_browser(
         browser_type=browser_type,
         headless=headless,
         args=["--no-sandbox", "--disable-dev-shm-usage"]
     )
-    
+
     yield real_browser_manager, browser_id
-    
+
     await real_browser_manager.stop_browser(browser_id)
 
 
@@ -189,12 +189,12 @@ async def browser_session(real_browser_manager, request):
 async def tab_session(browser_session):
     """Create a tab session for testing."""
     manager, browser_id = browser_session
-    
+
     tab_id = await manager.new_tab(browser_id)
     tab = await manager.get_tab(browser_id, tab_id)
-    
+
     yield manager, browser_id, tab_id, tab
-    
+
     await manager.close_tab(browser_id, tab_id)
 
 
@@ -273,7 +273,7 @@ def sample_config():
 # Mock helpers
 class MockResponse:
     """Mock HTTP response object."""
-    
+
     def __init__(self, status=200, url="https://example.com"):
         self.status = status
         self.url = url
@@ -282,20 +282,20 @@ class MockResponse:
 
 class MockElement:
     """Mock page element object."""
-    
+
     def __init__(self, tag_name="div", text_content="Test", attributes=None):
         self.tag_name = tag_name
         self.text_content = text_content
         self.attributes = attributes or {}
-    
+
     async def click(self):
         """Mock click method."""
         pass
-    
+
     async def fill(self, value):
         """Mock fill method."""
         self.attributes["value"] = value
-    
+
     async def get_attribute(self, name):
         """Mock get_attribute method."""
         return self.attributes.get(name)
@@ -306,7 +306,7 @@ def _is_browser_available() -> bool:
     """Check if a browser is available for testing."""
     try:
         import subprocess
-        
+
         # Check for Chrome
         try:
             subprocess.run(
@@ -318,7 +318,7 @@ def _is_browser_available() -> bool:
             return True
         except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
             pass
-        
+
         # Check for Chromium
         try:
             subprocess.run(
@@ -330,9 +330,9 @@ def _is_browser_available() -> bool:
             return True
         except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
             pass
-        
+
         return False
-        
+
     except Exception:
         return False
 
@@ -340,7 +340,7 @@ def _is_browser_available() -> bool:
 def create_mock_operation_result(success=True, data=None, error=None):
     """Create a mock OperationResult for testing."""
     from pydoll_mcp.models import OperationResult
-    
+
     return OperationResult(
         success=success,
         message="Test operation",
@@ -352,20 +352,20 @@ def create_mock_operation_result(success=True, data=None, error=None):
 def assert_operation_result(result, expected_success=True):
     """Assert that a result is a valid OperationResult with expected success."""
     import json
-    
+
     assert len(result) == 1
     assert result[0].type == "text"
-    
+
     data = json.loads(result[0].text)
     assert isinstance(data, dict)
     assert "success" in data
     assert data["success"] == expected_success
-    
+
     if expected_success:
         assert "data" in data
     else:
         assert "error" in data
-    
+
     return data
 
 
@@ -376,34 +376,34 @@ def performance_monitor():
     import time
     import psutil
     import os
-    
+
     process = psutil.Process(os.getpid())
-    
+
     class PerformanceMonitor:
         def __init__(self):
             self.start_time = None
             self.start_memory = None
             self.metrics = {}
-        
+
         def start(self):
             self.start_time = time.time()
             self.start_memory = process.memory_info().rss
-        
+
         def stop(self):
             if self.start_time:
                 self.metrics["duration"] = time.time() - self.start_time
                 self.metrics["memory_delta"] = process.memory_info().rss - self.start_memory
                 self.metrics["memory_peak"] = process.memory_info().rss
-        
+
         def assert_performance(self, max_duration=None, max_memory_mb=None):
             if max_duration and self.metrics.get("duration", 0) > max_duration:
                 pytest.fail(f"Test took too long: {self.metrics['duration']:.2f}s > {max_duration}s")
-            
+
             if max_memory_mb:
                 memory_mb = self.metrics.get("memory_delta", 0) / (1024 * 1024)
                 if memory_mb > max_memory_mb:
                     pytest.fail(f"Test used too much memory: {memory_mb:.2f}MB > {max_memory_mb}MB")
-    
+
     return PerformanceMonitor()
 
 
@@ -411,13 +411,13 @@ def performance_monitor():
 async def wait_for_condition(condition_func, timeout=5.0, interval=0.1):
     """Wait for a condition to become true."""
     import time
-    
+
     start_time = time.time()
     while time.time() - start_time < timeout:
         if await condition_func() if asyncio.iscoroutinefunction(condition_func) else condition_func():
             return True
         await asyncio.sleep(interval)
-    
+
     return False
 
 
@@ -426,21 +426,21 @@ async def wait_for_condition(condition_func, timeout=5.0, interval=0.1):
 def cleanup_test_files(tmp_path):
     """Automatically cleanup test files after each test."""
     yield
-    
+
     # Clean up any temporary files created during tests
     try:
         import shutil
-        
+
         test_dirs = [
             tmp_path / "screenshots",
             tmp_path / "downloads",
             tmp_path / "profiles"
         ]
-        
+
         for test_dir in test_dirs:
             if test_dir.exists():
                 shutil.rmtree(test_dir)
-                
+
     except Exception:
         pass  # Ignore cleanup errors
 
@@ -453,11 +453,11 @@ def setup_test_environment(monkeypatch):
     if "PYDOLL_ALLOW_NETWORK" not in os.environ:
         monkeypatch.setenv("PYDOLL_TEST_MODE", "1")
         monkeypatch.setenv("PYDOLL_DISABLE_NETWORK", "1")
-    
+
     # Set test-specific timeouts
     monkeypatch.setenv("PYDOLL_DEFAULT_TIMEOUT", "5000")
     monkeypatch.setenv("PYDOLL_NAVIGATION_TIMEOUT", "10000")
-    
+
     yield
-    
+
     # Any cleanup if needed

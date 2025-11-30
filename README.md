@@ -474,6 +474,22 @@ PyDoll MCP Server brings the groundbreaking capabilities of PyDoll to Claude, Op
 - **⚡ Native Async Architecture**: Lightning-fast concurrent automation
 - **🕵️ Advanced Stealth Mode**: Anti-detection techniques that make automation invisible
 - **🌐 Real-time Network Control**: Intercept, modify, and analyze all web traffic
+
+### 🎯 Unified Tools Architecture (NEW!)
+
+PyDoll MCP Server now features a streamlined **Unified Tools** architecture designed for better LLM usability:
+
+- **4 Unified "Fat Tools"**: Consolidate ~60 granular tools into powerful, action-based endpoints:
+  - `interact_element` - Click, type, hover, press keys, drag, scroll
+  - `manage_tab` - Create, close, refresh, activate, list tabs
+  - `browser_control` - Start, stop, list browsers, get state, reattach
+  - `execute_cdp_command` - Direct Chrome DevTools Protocol access
+
+- **Session Persistence**: Browser and tab state persisted in SQLite for resilience and recovery
+- **Smart Error Handling**: Context-aware error responses with DOM snapshots and page context
+- **Stateless Design**: BrowserManager decoupled from state management for better scalability
+
+**Legacy Tools**: All original granular tools remain available for backward compatibility.
 - **🔧 One-Click Setup**: Automatic Claude Desktop configuration
 - **🌍 Universal Compatibility**: Works on all systems including Korean Windows
 - **🎯 NEW v1.5.12**: Intelligent Tab Management with automatic ID detection and fallback mechanisms

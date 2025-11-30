@@ -8,7 +8,10 @@ from typing import Any, Dict, List, Sequence
 
 from mcp.types import Tool, TextContent
 
-# Import tool definitions and handlers from each category
+# Import unified tools (Fat Tools) - these are the recommended tools
+from .registry import create_unified_tools, create_unified_handlers
+
+# Import tool definitions and handlers from each category (legacy tools)
 from .browser_tools import BROWSER_TOOLS, BROWSER_TOOL_HANDLERS
 from .navigation_tools import NAVIGATION_TOOLS, NAVIGATION_TOOL_HANDLERS
 from .element_tools import ELEMENT_TOOLS, ELEMENT_TOOL_HANDLERS
@@ -21,8 +24,13 @@ from .file_tools import FILE_TOOLS, FILE_TOOL_HANDLERS
 from .search_automation import SEARCH_AUTOMATION_TOOLS, SEARCH_AUTOMATION_TOOL_HANDLERS
 from .page_tools import PAGE_TOOLS, PAGE_TOOL_HANDLERS
 
-# Combine all tools and handlers
+# Create unified tools
+UNIFIED_TOOLS = create_unified_tools()
+UNIFIED_TOOL_HANDLERS = create_unified_handlers()
+
+# Combine all tools and handlers (unified tools first for priority)
 ALL_TOOLS = (
+    UNIFIED_TOOLS +  # Unified tools first
     BROWSER_TOOLS +
     NAVIGATION_TOOLS +
     ELEMENT_TOOLS +
@@ -37,6 +45,7 @@ ALL_TOOLS = (
 )
 
 ALL_TOOL_HANDLERS = {
+    **UNIFIED_TOOL_HANDLERS,  # Unified handlers first (take precedence)
     **BROWSER_TOOL_HANDLERS,
     **NAVIGATION_TOOL_HANDLERS,
     **ELEMENT_TOOL_HANDLERS,
@@ -108,6 +117,8 @@ __all__ = [
     # Tool collections
     "ALL_TOOLS",
     "ALL_TOOL_HANDLERS",
+    "UNIFIED_TOOLS",
+    "UNIFIED_TOOL_HANDLERS",
     "TOOL_CATEGORIES",
 
     # Individual category tools

@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Sequence
 
 from mcp.types import Tool, TextContent
 
-from ..browser_manager import get_browser_manager
+from ..core import get_browser_manager
 from ..models import OperationResult
 
 logger = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ SCRIPT_TOOLS = [
             "required": ["browser_id", "script"]
         }
     ),
-    
+
     Tool(
         name="execute_automation_script",
         description="Execute predefined automation scripts",
@@ -104,7 +104,7 @@ SCRIPT_TOOLS = [
             "required": ["browser_id", "script_name"]
         }
     ),
-    
+
     Tool(
         name="inject_script_library",
         description="Inject JavaScript libraries into the page",
@@ -153,20 +153,20 @@ async def handle_execute_javascript(arguments: Dict[str, Any]) -> Sequence[TextC
         browser_id = arguments["browser_id"]
         tab_id = arguments.get("tab_id")
         script = arguments["script"]
-        
+
         wait_for_execution = arguments.get("wait_for_execution", True)
         return_result = arguments.get("return_result", True)
         timeout = arguments.get("timeout", 30)
         context = arguments.get("context", "page")
-        
+
         # Get tab with automatic fallback to active tab
         tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
-        
+
         # Execute JavaScript with proper error handling
         try:
             # PyDoll uses execute_script, not evaluate
             result = await tab.execute_script(script)
-            
+
             # Check for exceptionDetails (CDP standard)
             if result and 'result' in result and 'exceptionDetails' in result['result']:
                 exception_details = result['result']['exceptionDetails']
@@ -182,7 +182,7 @@ async def handle_execute_javascript(arguments: Dict[str, Any]) -> Sequence[TextC
             else:
                 result_value = None
                 result_type = "null"
-            
+
             operation_result = OperationResult(
                 success=True,
                 message="JavaScript executed successfully",
@@ -196,10 +196,10 @@ async def handle_execute_javascript(arguments: Dict[str, Any]) -> Sequence[TextC
                     "execution_time": "0.15s"
                 }
             )
-            
+
             logger.info(f"JavaScript executed successfully in {context} context")
             return [TextContent(type="text", text=operation_result.json())]
-            
+
         except Exception as js_error:
             # Handle JavaScript execution errors
             operation_result = OperationResult(
@@ -214,10 +214,10 @@ async def handle_execute_javascript(arguments: Dict[str, Any]) -> Sequence[TextC
                     "execution_context": context
                 }
             )
-            
+
             logger.error(f"JavaScript execution failed: {js_error}")
             return [TextContent(type="text", text=operation_result.json())]
-        
+
     except Exception as e:
         logger.error(f"Script execution request failed: {e}")
         result = OperationResult(
@@ -233,7 +233,7 @@ async def handle_execute_automation_script(arguments: Dict[str, Any]) -> Sequenc
     """Handle automation script execution request."""
     script_name = arguments["script_name"]
     parameters = arguments.get("parameters", {})
-    
+
     # Predefined automation scripts
     automation_scripts = {
         "scroll_to_bottom": {"description": "Scroll to bottom of page"},
@@ -241,7 +241,7 @@ async def handle_execute_automation_script(arguments: Dict[str, Any]) -> Sequenc
         "extract_all_text": {"description": "Extract all text content"},
         "take_full_inventory": {"description": "Take inventory of page elements"}
     }
-    
+
     if script_name not in automation_scripts:
         result = OperationResult(
             success=False,
@@ -250,7 +250,7 @@ async def handle_execute_automation_script(arguments: Dict[str, Any]) -> Sequenc
             data={"available_scripts": list(automation_scripts.keys())}
         )
         return [TextContent(type="text", text=result.json())]
-    
+
     # Simulate execution
     result = OperationResult(
         success=True,
@@ -268,7 +268,7 @@ async def handle_inject_script_library(arguments: Dict[str, Any]) -> Sequence[Te
     """Handle script library injection request."""
     library = arguments["library"]
     version = arguments.get("version", "latest")
-    
+
     # CDN URLs for popular libraries
     library_urls = {
         "jquery": "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js",
@@ -276,7 +276,7 @@ async def handle_inject_script_library(arguments: Dict[str, Any]) -> Sequence[Te
         "axios": "https://cdnjs.cloudflare.com/ajax/libs/axios/0.24.0/axios.min.js",
         "moment": "https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"
     }
-    
+
     if library == "custom":
         custom_url = arguments.get("custom_url")
         if not custom_url:
@@ -297,7 +297,7 @@ async def handle_inject_script_library(arguments: Dict[str, Any]) -> Sequence[Te
             )
             return [TextContent(type="text", text=result.json())]
         script_url = library_urls[library]
-    
+
     result = OperationResult(
         success=True,
         message=f"Library '{library}' injected successfully",
