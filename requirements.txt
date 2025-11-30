@@ -5,6 +5,7 @@
 pydoll-python>=2.12.4      # Revolutionary browser automation library
 mcp>=1.2.0                # Model Context Protocol core
 pydantic>=2.10.4          # Data validation and settings management
+pydantic-settings>=2.0.0  # Settings management with environment variable support
 typing-extensions>=4.0.0  # Extended typing support for older Python versions
 
 # Async and Performance Dependencies

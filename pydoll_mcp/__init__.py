@@ -90,7 +90,7 @@ TOTAL_TOOLS = sum(TOOL_CATEGORIES.values())
 # Import main components for easy access
 try:
     from .server import PyDollMCPServer, main
-    from .browser_manager import get_browser_manager
+    from .core import get_browser_manager
 except ImportError:
     # During installation, these may not be available yet
     PyDollMCPServer = None

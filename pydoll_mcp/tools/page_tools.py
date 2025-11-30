@@ -9,7 +9,7 @@ from typing import Any, Dict, Sequence
 from mcp.types import Tool, TextContent
 from pydoll.commands import PageCommands
 
-from ..browser_manager import get_browser_manager
+from ..core import get_browser_manager
 from ..models import OperationResult
 
 logger = logging.getLogger(__name__)
