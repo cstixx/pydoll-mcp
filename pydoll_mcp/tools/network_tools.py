@@ -1619,7 +1619,7 @@ NETWORK_TOOL_HANDLERS = {
     "fulfill_request": handle_fulfill_request,
     "continue_with_auth": handle_continue_with_auth,
 }
-= logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # Network Tools Definition
 

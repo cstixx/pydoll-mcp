@@ -347,7 +347,7 @@ ADVANCED_TOOL_HANDLERS = {
     "intercept_network_requests": handle_intercept_network_requests,
     "analyze_content_with_ai": handle_analyze_content_with_ai,
 }
-= logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # Advanced Tools Definition
 

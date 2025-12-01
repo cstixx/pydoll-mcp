@@ -577,7 +577,7 @@ FILE_TOOL_HANDLERS = {
     "save_session": handle_save_session,
     "load_session": handle_load_session
 }
-= logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # File Tools Definition
 

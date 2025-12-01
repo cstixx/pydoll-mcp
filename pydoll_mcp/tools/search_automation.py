@@ -397,7 +397,7 @@ async def handle_intelligent_search(arguments: Dict[str, Any]) -> Sequence[TextC
 SEARCH_AUTOMATION_TOOL_HANDLERS = {
     "intelligent_search": handle_intelligent_search,
 }
-= logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # Advanced Search Automation Tools Definition
 

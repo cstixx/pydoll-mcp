@@ -818,7 +818,7 @@ PROTECTION_TOOL_HANDLERS = {
 
 # For backward compatibility
 import asyncio
-= logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # Protection Tools Definition
 
