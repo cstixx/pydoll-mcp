@@ -50,11 +50,9 @@ from pydoll_mcp.tools.protection_tools import (
     handle_disable_cloudflare_auto_solve,
     PROTECTION_TOOL_HANDLERS
 )
-from pydoll_mcp.tools.element_tools import (
-    handle_find_or_wait_element,
-    handle_query,
-    handle_press_key,
-    ELEMENT_TOOL_HANDLERS
+from pydoll_mcp.tools import (
+    UNIFIED_TOOLS,
+    UNIFIED_TOOL_HANDLERS
 )
 from pydoll_mcp.tools.navigation_tools import (
     handle_scroll,
@@ -615,10 +613,25 @@ class TestToolRegistration:
         assert "disable_cloudflare_auto_solve" in PROTECTION_TOOL_HANDLERS
 
     def test_element_tool_handlers_registered(self):
-        """Test that new element tools are registered."""
-        assert "find_or_wait_element" in ELEMENT_TOOL_HANDLERS
-        assert "query" in ELEMENT_TOOL_HANDLERS
-        assert "press_key" in ELEMENT_TOOL_HANDLERS
+        """Test that element tools are registered in unified tools."""
+        # Element tools are now in unified tools (find_element, interact_element)
+        unified_tool_names = [tool.name for tool in UNIFIED_TOOLS]
+        assert "find_element" in unified_tool_names
+        assert "interact_element" in unified_tool_names
+        
+        # Check that unified tool handlers are registered
+        assert "find_element" in UNIFIED_TOOL_HANDLERS
+        assert "interact_element" in UNIFIED_TOOL_HANDLERS
+        
+        # Verify that find_element supports wait functionality (find_or_wait_element replacement)
+        find_tool = next(t for t in UNIFIED_TOOLS if t.name == "find_element")
+        assert "action" in find_tool.inputSchema["properties"]
+        assert "wait_for" in find_tool.inputSchema["properties"]["action"]["enum"]
+        
+        # Verify that interact_element supports press_key functionality
+        interact_tool = next(t for t in UNIFIED_TOOLS if t.name == "interact_element")
+        assert "action" in interact_tool.inputSchema["properties"]
+        assert "press_key" in interact_tool.inputSchema["properties"]["action"]["enum"]
 
     def test_navigation_tool_handlers_registered(self):
         """Test that new navigation tools are registered."""
@@ -627,6 +640,19 @@ class TestToolRegistration:
 
     def test_browser_context_handlers_registered(self):
         """Test that browser context tools are registered."""
+        # Browser context tools are now in unified browser_control tool
+        browser_control_tool = next(t for t in UNIFIED_TOOLS if t.name == "browser_control")
+        assert browser_control_tool is not None
+        
+        # Check that browser_control supports context and permissions actions
+        action_enum = browser_control_tool.inputSchema["properties"]["action"]["enum"]
+        assert "create_context" in action_enum
+        assert "list_contexts" in action_enum
+        assert "delete_context" in action_enum
+        assert "grant_permissions" in action_enum
+        assert "reset_permissions" in action_enum
+        
+        # Also check that legacy handlers still exist for backward compatibility
         assert "create_browser_context" in BROWSER_TOOL_HANDLERS
         assert "list_browser_contexts" in BROWSER_TOOL_HANDLERS
         assert "delete_browser_context" in BROWSER_TOOL_HANDLERS
