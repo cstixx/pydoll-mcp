@@ -224,6 +224,7 @@ class BrowserManager:
         """
         self.session_store = session_store or SessionStore()
         self.settings = get_settings()
+        # pylint: disable=no-member
         self.default_browser_type = self.settings.browser_type.lower()
         self.max_browsers = self.settings.max_browsers
         self.max_tabs_per_browser = self.settings.max_tabs_per_browser
@@ -575,6 +576,7 @@ class BrowserManager:
             pid = None
             try:
                 # PyDoll may expose connection info - check for common attributes
+                # pylint: disable=no-member
                 if hasattr(browser, '_connection') and hasattr(browser._connection, 'port'):
                     debug_port = browser._connection.port
                 elif hasattr(browser, 'port'):
