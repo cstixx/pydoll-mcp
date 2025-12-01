@@ -921,11 +921,12 @@ class TestNavigationEnhancements:
             mock_tab.get_frame.assert_awaited_once_with("#frame-1")
 
 
-class TestBrowserContextManagement:
-    """Test browser context management tools."""
-
-    @pytest.mark.asyncio
-    async def test_create_browser_context(self):
+# Note: TestBrowserContextManagement removed - these tools are now in unified browser_control tool
+# class TestBrowserContextManagement:
+#     """Test browser context management tools."""
+#
+#     @pytest.mark.asyncio
+#     async def test_create_browser_context(self):
         """Test create_browser_context tool."""
         with patch('pydoll_mcp.tools.browser_tools.get_browser_manager') as mock_manager:
             mock_browser_manager = AsyncMock()
