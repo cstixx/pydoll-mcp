@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """Test configuration and fixtures for PyDoll MCP Server.
 
 This module provides shared test configuration, fixtures, and utilities
@@ -462,31 +461,7 @@ def setup_test_environment(monkeypatch):
     yield
 
     # Any cleanup if needed
-=======
-"""Test configuration and fixtures for PyDoll MCP Server.
-
-This module provides shared test configuration, fixtures, and utilities
-for all test modules in the PyDoll MCP Server test suite.
-"""
-
-import asyncio
-import os
-import sys
-from pathlib import Path
-from typing import AsyncGenerator, Generator
-
-import pytest
-from unittest.mock import AsyncMock, MagicMock
-
-# Add the parent directory to sys.path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from pydoll_mcp.core import BrowserManager
-from pydoll_mcp.server import PyDollMCPServer
-
-
-# Test Configuration
-TEST_TIMEOUT = 30  # seconds
+= 30  # seconds
 BROWSER_TIMEOUT = 15  # seconds
 INTEGRATION_TIMEOUT = 60  # seconds
 
