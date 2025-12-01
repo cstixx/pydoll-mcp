@@ -35,22 +35,6 @@ try:
     from .tools import (
         ALL_TOOLS,
         ALL_TOOL_HANDLERS,
-        BROWSER_TOOLS,
-        NAVIGATION_TOOLS,
-        # ELEMENT_TOOLS and SCREENSHOT_TOOLS removed (replaced by unified tools)
-        SCRIPT_TOOLS,
-        ADVANCED_TOOLS,
-        PROTECTION_TOOLS,
-        NETWORK_TOOLS,
-        FILE_TOOLS,
-        BROWSER_TOOL_HANDLERS,
-        NAVIGATION_TOOL_HANDLERS,
-        # ELEMENT_TOOL_HANDLERS and SCREENSHOT_TOOL_HANDLERS removed (replaced by unified tools)
-        SCRIPT_TOOL_HANDLERS,
-        ADVANCED_TOOL_HANDLERS,
-        PROTECTION_TOOL_HANDLERS,
-        NETWORK_TOOL_HANDLERS,
-        FILE_TOOL_HANDLERS,
         TOTAL_TOOLS,
         TOOL_CATEGORIES,
         UNIFIED_TOOLS
@@ -65,22 +49,6 @@ except ImportError as e:
     # Fallback to empty tools if import fails
     ALL_TOOLS = []
     ALL_TOOL_HANDLERS = {}
-    BROWSER_TOOLS = []
-    NAVIGATION_TOOLS = []
-    # ELEMENT_TOOLS and SCREENSHOT_TOOLS removed (replaced by unified tools)
-    SCRIPT_TOOLS = []
-    ADVANCED_TOOLS = []
-    PROTECTION_TOOLS = []
-    NETWORK_TOOLS = []
-    FILE_TOOLS = []
-    BROWSER_TOOL_HANDLERS = {}
-    NAVIGATION_TOOL_HANDLERS = {}
-    # ELEMENT_TOOL_HANDLERS and SCREENSHOT_TOOL_HANDLERS removed (replaced by unified tools)
-    SCRIPT_TOOL_HANDLERS = {}
-    ADVANCED_TOOL_HANDLERS = {}
-    PROTECTION_TOOL_HANDLERS = {}
-    NETWORK_TOOL_HANDLERS = {}
-    FILE_TOOL_HANDLERS = {}
     TOTAL_TOOLS = 0
     TOOL_CATEGORIES = {}
     UNIFIED_TOOLS = []
@@ -626,7 +594,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
-from . import __version__, BANNER, health_check, print_banner
+from . import __version__, health_check, print_banner
 from .core import SessionStore, get_browser_manager
 
 # Import all tools and handlers from the tools module
@@ -634,55 +602,21 @@ try:
     from .tools import (
         ALL_TOOLS,
         ALL_TOOL_HANDLERS,
-        BROWSER_TOOLS,
-        NAVIGATION_TOOLS,
-        ELEMENT_TOOLS,
-        SCREENSHOT_TOOLS,
-        SCRIPT_TOOLS,
-        ADVANCED_TOOLS,
-        PROTECTION_TOOLS,
-        NETWORK_TOOLS,
-        FILE_TOOLS,
-        BROWSER_TOOL_HANDLERS,
-        NAVIGATION_TOOL_HANDLERS,
-        ELEMENT_TOOL_HANDLERS,
-        SCREENSHOT_TOOL_HANDLERS,
-        SCRIPT_TOOL_HANDLERS,
-        ADVANCED_TOOL_HANDLERS,
-        PROTECTION_TOOL_HANDLERS,
-        NETWORK_TOOL_HANDLERS,
-        FILE_TOOL_HANDLERS,
         TOTAL_TOOLS,
-        TOOL_CATEGORIES
+        TOOL_CATEGORIES,
+        UNIFIED_TOOLS
     )
     logger = logging.getLogger(__name__)
-    logger.info(f"Successfully imported {TOTAL_TOOLS} tools across {len(TOOL_CATEGORIES)} categories")
+    logger.info(f"Successfully imported {TOTAL_TOOLS} tools ({len(UNIFIED_TOOLS)} unified + {TOTAL_TOOLS - len(UNIFIED_TOOLS)} legacy) across {len(TOOL_CATEGORIES)} categories")
 except ImportError as e:
     logger = logging.getLogger(__name__)
     logger.error(f"Failed to import tools: {e}")
     # Fallback to empty tools if import fails
     ALL_TOOLS = []
     ALL_TOOL_HANDLERS = {}
-    BROWSER_TOOLS = []
-    NAVIGATION_TOOLS = []
-    ELEMENT_TOOLS = []
-    SCREENSHOT_TOOLS = []
-    SCRIPT_TOOLS = []
-    ADVANCED_TOOLS = []
-    PROTECTION_TOOLS = []
-    NETWORK_TOOLS = []
-    FILE_TOOLS = []
-    BROWSER_TOOL_HANDLERS = {}
-    NAVIGATION_TOOL_HANDLERS = {}
-    ELEMENT_TOOL_HANDLERS = {}
-    SCREENSHOT_TOOL_HANDLERS = {}
-    SCRIPT_TOOL_HANDLERS = {}
-    ADVANCED_TOOL_HANDLERS = {}
-    PROTECTION_TOOL_HANDLERS = {}
-    NETWORK_TOOL_HANDLERS = {}
-    FILE_TOOL_HANDLERS = {}
     TOTAL_TOOLS = 0
     TOOL_CATEGORIES = {}
+    UNIFIED_TOOLS = []
 
 # Configure logging
 def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None) -> logging.Logger:
