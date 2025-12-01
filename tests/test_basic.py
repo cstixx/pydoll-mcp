@@ -194,7 +194,6 @@ class TestToolSystem:
             from pydoll_mcp.tools import (
                 ALL_TOOLS, ALL_TOOL_HANDLERS,
                 BROWSER_TOOLS, NAVIGATION_TOOLS,
-                ELEMENT_TOOLS, SCREENSHOT_TOOLS,
                 SCRIPT_TOOLS, ADVANCED_TOOLS
             )
 
