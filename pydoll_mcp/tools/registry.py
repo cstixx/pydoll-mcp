@@ -573,40 +573,6 @@ def create_unified_tools() -> list[Tool]:
         }
     ))
 
-    # Interact Page Tool (Dialogs)
-    tools.append(Tool(
-        name="interact_page",
-        description="⭐ RECOMMENDED: Unified page interaction tool. Handles handle_dialog and handle_alert operations. Replaces multiple legacy page interaction tools.",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": [action.value for action in DialogAction],
-                    "description": "Action to perform: handle_dialog, handle_alert"
-                },
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "tab_id": {
-                    "type": "string",
-                    "description": "Tab ID, uses active tab if not specified"
-                },
-                "accept": {
-                    "type": "boolean",
-                    "default": True,
-                    "description": "Whether to accept or dismiss the dialog"
-                },
-                "prompt_text": {
-                    "type": "string",
-                    "description": "Text to enter into prompt dialog (for handle_dialog action)"
-                }
-            },
-            "required": ["action", "browser_id"]
-        }
-    ))
-
     # Find Element Tool
     tools.append(Tool(
         name="find_element",
