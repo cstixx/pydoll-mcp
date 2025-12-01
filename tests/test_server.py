@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """Unit tests for PyDoll MCP Server.
 
 This module contains unit tests for the core functionality of the PyDoll MCP Server.
@@ -537,35 +536,7 @@ class TestPerformance:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-=======
-"""Unit tests for PyDoll MCP Server.
-
-This module contains unit tests for the core functionality of the PyDoll MCP Server.
-"""
-
-import asyncio
-import json
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, Mock, PropertyMock
-from datetime import datetime
-
-from pydoll_mcp import __version__
-from pydoll_mcp.server import PyDollMCPServer
-from pydoll_mcp.core import BrowserManager, BrowserInstance
-from pydoll_mcp.models import BrowserConfig, OperationResult
-
-
-class TestPyDollMCPServer:
-    """Test cases for the main PyDollMCPServer class."""
-
-    @pytest.fixture
-    def server(self):
-        """Create a test server instance."""
-        return PyDollMCPServer("test-server")
-
-    def test_server_initialization(self, server):
-        """Test server initialization."""
-        assert server.server_name == "test-server"
+== "test-server"
         assert server.is_running is False
         assert server.browser_manager is None
         assert "total_requests" in server.stats
@@ -1076,4 +1047,3 @@ class TestPerformance:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
->>>>>>> 38bf80dd80f87d61faa654c60d3fe056f753cbda
