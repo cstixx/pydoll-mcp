@@ -576,14 +576,14 @@ class BrowserManager:
             pid = None
             try:
                 # PyDoll may expose connection info - check for common attributes
-                # pylint: disable=no-member
+                # pylint: disable=no-member,protected-access
                 if hasattr(browser, '_connection') and hasattr(browser._connection, 'port'):
-                    debug_port = browser._connection.port
+                    debug_port = browser._connection.port  # type: ignore
                 elif hasattr(browser, 'port'):
                     debug_port = browser.port
                 # Try to get PID if available
                 if hasattr(browser, 'process') and hasattr(browser.process, 'pid'):
-                    pid = browser.process.pid
+                    pid = browser.process.pid  # type: ignore
             except Exception as e:
                 logger.debug(f"Could not extract debug_port/pid: {e}")
 
