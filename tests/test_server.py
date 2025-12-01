@@ -536,11 +536,6 @@ class TestPerformance:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-        assert server.browser_manager is None
-        assert "total_requests" in server.stats
-
-    @pytest.mark.asyncio
-    async def test_server_initialize(self, server):
         """Test server component initialization."""
         with patch('pydoll_mcp.server.get_browser_manager') as mock_browser_manager:
             mock_browser_manager.return_value = MagicMock()

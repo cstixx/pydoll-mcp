@@ -80,7 +80,7 @@ class TestToolDefinitions:
         # Unified tools category should exist
         assert "unified_tools" in TOOL_CATEGORIES
         assert TOOL_CATEGORIES["unified_tools"]["count"] == 10
-        
+
         # Check that unified tools are listed
         unified_tool_names = [tool.name for tool in UNIFIED_TOOLS]
         category_tools = TOOL_CATEGORIES["unified_tools"]["tools"]
@@ -185,7 +185,7 @@ class TestElementTools:
         # Should support action parameter
         assert "action" in properties
         assert "enum" in properties["action"]
-        
+
         # Should support selector
         assert "selector" in properties
 
@@ -202,7 +202,7 @@ class TestScreenshotTools:
         # Screenshot tools are now in unified capture_media tool
         unified_tool_names = [tool.name for tool in UNIFIED_TOOLS]
         assert "capture_media" in unified_tool_names
-        
+
         # Check that capture_media supports screenshot actions
         capture_tool = next(t for t in UNIFIED_TOOLS if t.name == "capture_media")
         assert "action" in capture_tool.inputSchema["properties"]
