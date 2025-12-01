@@ -536,7 +536,7 @@ class TestPerformance:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-== "test-server"
+        == "test-server"
         assert server.is_running is False
         assert server.browser_manager is None
         assert "total_requests" in server.stats
