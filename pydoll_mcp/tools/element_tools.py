@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # Note: All element tools have been moved to unified tools
 # - find_element, click_element, type_text, press_key, find_or_wait_element, query, get_parent_element
 # Use unified tools: find_element and interact_element instead
-# 
+#
 # ELEMENT_TOOLS removed - all tools replaced by unified tools
 # Handler functions are kept below for internal use by unified tool handlers
 

@@ -2,14 +2,12 @@
 
 
 This test suite covers:
-- Enhanced alert/dialog handling (handle_alert, handle_dialog)
-- File upload/download with real PyDoll APIs
-- PDF saving with file support
 - Tab management (bring_tab_to_front)
 - Download configuration tools
 - File chooser interception
 - Network monitoring enhancements
 - Cloudflare captcha tools
+- Unified tools (replacing legacy alert/dialog, file upload/download, PDF saving)
 """
 
 from pydoll_mcp.tools.element_tools import (
@@ -26,9 +24,6 @@ from unittest.mock import AsyncMock, MagicMock, patch, Mock
 from mcp.types import TextContent
 
 from pydoll_mcp.tools.page_tools import (
-    handle_handle_alert,
-    handle_handle_dialog,
-    handle_save_pdf,
     PAGE_TOOL_HANDLERS
 )
 from pydoll_mcp.tools.browser_tools import (
@@ -40,8 +35,6 @@ from pydoll_mcp.tools.browser_tools import (
     BROWSER_TOOL_HANDLERS
 )
 from pydoll_mcp.tools.file_tools import (
-    handle_upload_file,
-    handle_download_file,
     FILE_TOOL_HANDLERS
 )
 from pydoll_mcp.tools.network_tools import (
@@ -64,13 +57,8 @@ from pydoll_mcp.tools.navigation_tools import (
     handle_get_frame,
     NAVIGATION_TOOL_HANDLERS
 )
-from pydoll_mcp.tools.browser_tools import (
-    handle_create_browser_context,
-    handle_list_browser_contexts,
-    handle_delete_browser_context,
-    handle_grant_permissions,
-    handle_reset_permissions,
-)
+# Note: create_browser_context, grant_permissions, reset_permissions handlers removed
+# Use unified browser_control tool instead
 from pydoll_mcp.tools.network_tools import (
     handle_enable_dom_events,
     handle_disable_dom_events,
@@ -89,146 +77,10 @@ from pydoll_mcp.tools.network_tools import (
 )
 
 
-class TestAlertDialogHandling:
-    """Test enhanced alert and dialog handling tools."""
-
-    @pytest.mark.asyncio
-    async def test_handle_alert_accept(self):
-        """Test handle_alert with accept=True."""
-        with patch('pydoll_mcp.tools.page_tools.get_browser_manager') as mock_manager:
-            mock_browser_manager = AsyncMock()
-            mock_tab = AsyncMock()
-
-            # Mock dialog detection
-            mock_tab.has_dialog = AsyncMock(return_value=True)
-            mock_tab.get_dialog_message = AsyncMock(return_value="Test alert message")
-            mock_tab.handle_dialog = AsyncMock()
-
-            mock_manager.return_value = mock_browser_manager
-            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
-
-            result = await handle_handle_alert({
-                "browser_id": "browser-1",
-                "accept": True
-            })
-
-            assert len(result) == 1
-            result_data = json.loads(result[0].text)
-            assert result_data["success"] is True
-            assert result_data["data"]["accepted"] is True
-            assert result_data["data"]["dialog_message"] == "Test alert message"
-            assert result_data["data"]["dialog_detected"] is True
-            mock_tab.handle_dialog.assert_awaited_once_with(accept=True)
-
-    @pytest.mark.asyncio
-    async def test_handle_alert_dismiss(self):
-        """Test handle_alert with accept=False."""
-        with patch('pydoll_mcp.tools.page_tools.get_browser_manager') as mock_manager:
-            mock_browser_manager = AsyncMock()
-            mock_tab = AsyncMock()
-
-            mock_tab.has_dialog = AsyncMock(return_value=False)
-            mock_tab.handle_dialog = AsyncMock()
-
-            mock_manager.return_value = mock_browser_manager
-            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
-
-            result = await handle_handle_alert({
-                "browser_id": "browser-1",
-                "accept": False
-            })
-
-            assert len(result) == 1
-            result_data = json.loads(result[0].text)
-            assert result_data["success"] is True
-            assert result_data["data"]["accepted"] is False
-            mock_tab.handle_dialog.assert_awaited_once_with(accept=False)
-
-    @pytest.mark.asyncio
-    async def test_handle_dialog_with_prompt(self):
-        """Test handle_dialog with prompt text."""
-        with patch('pydoll_mcp.tools.page_tools.get_browser_manager') as mock_manager:
-            mock_browser_manager = AsyncMock()
-            mock_tab = AsyncMock()
-
-            mock_tab.has_dialog = AsyncMock(return_value=True)
-            mock_tab.get_dialog_message = AsyncMock(return_value="Enter your name:")
-            mock_tab.handle_dialog = AsyncMock()
-
-            mock_manager.return_value = mock_browser_manager
-            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
-
-            result = await handle_handle_dialog({
-                "browser_id": "browser-1",
-                "accept": True,
-                "prompt_text": "John Doe"
-            })
-
-            assert len(result) == 1
-            result_data = json.loads(result[0].text)
-            assert result_data["success"] is True
-            assert result_data["data"]["prompt_text_entered"] == "John Doe"
-            mock_tab.handle_dialog.assert_awaited_once_with(accept=True, prompt_text="John Doe")
-
-
-class TestPDFSaving:
-    """Test enhanced PDF saving functionality."""
-
-    @pytest.mark.asyncio
-    async def test_save_pdf_base64(self):
-        """Test save_pdf without file path (returns base64)."""
-        with patch('pydoll_mcp.tools.page_tools.get_browser_manager') as mock_manager:
-            mock_browser_manager = AsyncMock()
-            mock_tab = AsyncMock()
-
-            mock_tab.print_to_pdf = AsyncMock(return_value="base64_pdf_data")
-
-            mock_manager.return_value = mock_browser_manager
-            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
-
-            result = await handle_save_pdf({
-                "browser_id": "browser-1"
-            })
-
-            assert len(result) == 1
-            result_data = json.loads(result[0].text)
-            assert result_data["success"] is True
-            assert "pdf_data" in result_data["data"]
-            assert result_data["data"]["pdf_data"] == "base64_pdf_data"
-            mock_tab.print_to_pdf.assert_awaited_once()
-
-    @pytest.mark.asyncio
-    async def test_save_pdf_to_file(self):
-        """Test save_pdf with file path."""
-        with patch('pydoll_mcp.tools.page_tools.get_browser_manager') as mock_manager:
-            import base64
-            mock_browser_manager = AsyncMock()
-            mock_tab = AsyncMock()
-
-            # Create a temporary file path
-            with tempfile.TemporaryDirectory() as tmpdir:
-                pdf_path = os.path.join(tmpdir, "test.pdf")
-                pdf_data = base64.b64encode(b"fake pdf content").decode('utf-8')
-
-                mock_tab.print_to_pdf = AsyncMock(return_value=pdf_data)
-
-                mock_manager.return_value = mock_browser_manager
-                mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
-
-                result = await handle_save_pdf({
-                    "browser_id": "browser-1",
-                    "file_path": pdf_path
-                })
-
-                assert len(result) == 1
-                result_data = json.loads(result[0].text)
-                assert result_data["success"] is True
-                assert "file_path" in result_data["data"]
-                assert os.path.exists(pdf_path)
-
-                # Verify file was written
-                with open(pdf_path, "rb") as f:
-                    assert f.read() == b"fake pdf content"
+# Note: TestAlertDialogHandling and TestPDFSaving removed
+# These tools (handle_alert, handle_dialog, save_pdf) are now in unified tools:
+# - Use interact_page tool for dialogs
+# - Use capture_media tool for PDFs
 
 
 class TestTabManagement:
@@ -657,12 +509,8 @@ class TestToolRegistration:
         assert "grant_permissions" in action_enum
         assert "reset_permissions" in action_enum
 
-        # Also check that legacy handlers still exist for backward compatibility
-        assert "create_browser_context" in BROWSER_TOOL_HANDLERS
-        assert "list_browser_contexts" in BROWSER_TOOL_HANDLERS
-        assert "delete_browser_context" in BROWSER_TOOL_HANDLERS
-        assert "grant_permissions" in BROWSER_TOOL_HANDLERS
-        assert "reset_permissions" in BROWSER_TOOL_HANDLERS
+        # Note: Legacy handlers removed from public API - use unified browser_control tool instead
+        # Handler functions still exist internally for unified tools to use
 
     def test_network_event_handlers_registered(self):
         """Test that event control tools are registered."""

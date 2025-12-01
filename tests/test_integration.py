@@ -327,15 +327,17 @@ class TestToolsIntegration:
         tab = await manager.get_tab(browser_id, tab_id)
         await tab.go_to("https://httpbin.org/html")
 
-        from pydoll_mcp.tools.script_tools import handle_execute_javascript
+        from pydoll_mcp.tools.handlers import handle_execute_script
+        from pydoll_mcp.tools.definitions import ExecuteScriptInput, ScriptAction
 
-        # Execute JavaScript
-        script_result = await handle_execute_javascript({
-            "browser_id": browser_id,
-            "tab_id": tab_id,
-            "script": "document.title",
-            "return_result": True
-        })
+        # Execute JavaScript using unified execute_script tool
+        script_result = await handle_execute_script(ExecuteScriptInput(
+            action=ScriptAction.EXECUTE,
+            browser_id=browser_id,
+            tab_id=tab_id,
+            script="document.title",
+            return_result=True
+        ))
 
         script_data = json.loads(script_result[0].text)
         assert script_data["success"] is True
@@ -399,15 +401,17 @@ class TestErrorHandling:
             tab = await manager.get_tab(browser_id, tab_id)
             await tab.go_to("https://httpbin.org/html")
 
-            from pydoll_mcp.tools.script_tools import handle_execute_javascript
+            from pydoll_mcp.tools.handlers import handle_execute_script
+            from pydoll_mcp.tools.definitions import ExecuteScriptInput, ScriptAction
 
-            # Execute invalid JavaScript
-            result = await handle_execute_javascript({
-                "browser_id": browser_id,
-                "tab_id": tab_id,
-                "script": "this.is.invalid.javascript.code();",
-                "return_result": True
-            })
+            # Execute invalid JavaScript using unified execute_script tool
+            result = await handle_execute_script(ExecuteScriptInput(
+                action=ScriptAction.EXECUTE,
+                browser_id=browser_id,
+                tab_id=tab_id,
+                script="this.is.invalid.javascript.code();",
+                return_result=True
+            ))
 
             result_data = json.loads(result[0].text)
             assert result_data["success"] is False
