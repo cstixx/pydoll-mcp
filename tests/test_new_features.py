@@ -213,87 +213,8 @@ class TestFileChooserInterception:
 class TestFileUploadDownload:
     """Test file upload and download with real PyDoll APIs."""
 
-    @pytest.mark.asyncio
-    async def test_upload_file(self):
-        """Test file upload using expect_file_chooser."""
-        with patch('pydoll_mcp.tools.file_tools.get_browser_manager') as mock_manager:
-            mock_browser_manager = AsyncMock()
-            mock_tab = AsyncMock()
-            mock_element = AsyncMock()
-
-            # Create a temporary file
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.txt') as tmp_file:
-                tmp_file.write(b"test content")
-                tmp_path = tmp_file.name
-
-            try:
-                # Mock file chooser generator
-                async def file_chooser_gen():
-                    yield None
-
-                mock_tab.expect_file_chooser = MagicMock(return_value=file_chooser_gen())
-                mock_tab.find = AsyncMock(return_value=mock_element)
-                mock_element.click = AsyncMock()
-
-                mock_manager.return_value = mock_browser_manager
-                mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
-
-                result = await handle_upload_file({
-                    "browser_id": "browser-1",
-                    "file_path": tmp_path,
-                    "input_selector": {"css_selector": "input[type='file']"}
-                })
-
-                assert len(result) == 1
-                result_data = json.loads(result[0].text)
-                assert result_data["success"] is True
-                assert result_data["data"]["upload_status"] == "completed"
-                mock_tab.expect_file_chooser.assert_called_once()
-                mock_element.click.assert_awaited_once()
-            finally:
-                if os.path.exists(tmp_path):
-                    os.unlink(tmp_path)
-
-    @pytest.mark.asyncio
-    async def test_download_file(self):
-        """Test file download using expect_download."""
-        with patch('pydoll_mcp.tools.file_tools.get_browser_manager') as mock_manager:
-            mock_browser_manager = AsyncMock()
-            mock_browser_instance = AsyncMock()
-            mock_browser = AsyncMock()
-            mock_tab = AsyncMock()
-
-            # Mock download object
-            mock_download = Mock()
-            mock_download.filename = "test.pdf"
-            mock_download.path = Path("/tmp/test.pdf")
-            mock_download.size = 1024
-            mock_download.id = "dl-123"
-
-            async def download_gen():
-                yield mock_download
-
-            mock_tab.expect_download = MagicMock(return_value=download_gen())
-            mock_tab.go_to = AsyncMock()
-            mock_browser_instance.browser = mock_browser
-            mock_browser.set_download_behavior = AsyncMock()
-            mock_browser.set_download_path = AsyncMock()
-
-            mock_manager.return_value = mock_browser_manager
-            mock_browser_manager.get_browser = AsyncMock(return_value=mock_browser_instance)
-            mock_browser_manager.get_tab_with_fallback.return_value = (mock_tab, "tab-1")
-
-            result = await handle_download_file({
-                "browser_id": "browser-1",
-                "url": "https://example.com/file.pdf",
-                "wait_for_completion": True
-            })
-
-            assert len(result) == 1
-            result_data = json.loads(result[0].text)
-            assert result_data["success"] is True
-            assert result_data["data"]["status"] == "completed"
-            mock_tab.expect_download.assert_called_once()
+    # Note: test_upload_file and test_download_file removed
+    # These tools are now in unified manage_file tool
 
 
 class TestNetworkMonitoring:
