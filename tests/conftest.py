@@ -21,9 +21,9 @@ from pydoll_mcp.server import PyDollMCPServer
 
 
 # Test Configuration
-TEST_TIMEOUT timeout timeout =  seconds
-BROWSER_TIMEOUT timeout =  seconds
-INTEGRATION_TIMEOUT timeout =  seconds
+TEST_TIMEOUT TEST_TIMEOUT = 30  # seconds
+BROWSER_TEST_TIMEOUT = 30  # seconds
+INTEGRATION_TEST_TIMEOUT = 30  # seconds
 
 # Test environment variables
 os.environ["PYDOLL_LOG_LEVEL"] = "WARNING"  # Reduce log noise during tests
@@ -461,9 +461,9 @@ def setup_test_environment(monkeypatch):
     yield
 
     # Any cleanup if needed
-timeout timeout =  seconds
-BROWSER_TIMEOUT timeout =  seconds
-INTEGRATION_TIMEOUT timeout =  seconds
+TEST_TIMEOUT = 30  # seconds
+BROWSER_TEST_TIMEOUT = 30  # seconds
+INTEGRATION_TEST_TIMEOUT = 30  # seconds
 
 # Test environment variables
 os.environ["PYDOLL_LOG_LEVEL"] = "WARNING"  # Reduce log noise during tests
