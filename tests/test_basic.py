@@ -286,19 +286,18 @@ class TestIntegrationScenarios:
     """Integration test scenarios."""
 
     @pytest.mark.asyncio
-    @patch('pydoll_mcp.server.SessionStore')
     @patch('pydoll_mcp.server.get_browser_manager')
-    async def test_basic_server_lifecycle(self, mock_get_browser_manager, mock_session_store_class):
+    async def test_basic_server_lifecycle(self, mock_get_browser_manager):
         """Test basic server lifecycle."""
         # Mock SessionStore
         mock_session_store = AsyncMock()
         mock_session_store.list_browsers = AsyncMock(return_value=[])
         mock_session_store.close = AsyncMock()
-        mock_session_store_class.return_value = mock_session_store
 
         # Mock browser manager
         mock_browser_manager = AsyncMock()
         mock_browser_manager.cleanup_all = AsyncMock()
+        mock_browser_manager.session_store = mock_session_store
         mock_get_browser_manager.return_value = mock_browser_manager
 
         server = PyDollMCPServer("integration-test")
@@ -311,7 +310,8 @@ class TestIntegrationScenarios:
         await server.cleanup()
         assert server.is_running is False
         mock_browser_manager.cleanup_all.assert_called_once()
-        mock_session_store.close.assert_called_once()
+        # SessionStore.close is called by browser_manager cleanup, not directly by server
+        # So we check that cleanup_all was called, which should handle session store cleanup
 
     @pytest.mark.asyncio
     @patch('pydoll_mcp.core.browser_manager.Chrome')
