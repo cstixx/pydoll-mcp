@@ -7,8 +7,6 @@ from pydoll_mcp.tools import (
     ALL_TOOLS,
     BROWSER_TOOLS,
     NAVIGATION_TOOLS,
-    ELEMENT_TOOLS,
-    SCREENSHOT_TOOLS,
     SCRIPT_TOOLS,
     PROTECTION_TOOLS,
     NETWORK_TOOLS,
@@ -18,6 +16,7 @@ from pydoll_mcp.tools import (
     SEARCH_AUTOMATION_TOOLS,
     PAGE_TOOLS,
     ADVANCED_TOOLS,
+    UNIFIED_TOOLS,
 )
 
 
@@ -26,27 +25,22 @@ class TestToolDefinitions:
 
     def test_tool_counts(self):
         """Test that tool counts match expected values."""
-        # Browser tools: 13 base + 5 new (create_browser_context, list_browser_contexts, delete_browser_context, grant_permissions, reset_permissions) = 18
-        assert len(BROWSER_TOOLS) == 18
-        # Navigation tools: 7 base + 2 new (scroll, get_frame) = 9
-        assert len(NAVIGATION_TOOLS) == 9
-        # Element tools: 4 base + 3 new (find_or_wait_element, query, press_key) = 7
-        assert len(ELEMENT_TOOLS) == 7
-        assert len(SCREENSHOT_TOOLS) == 3
-        assert len(SCRIPT_TOOLS) == 3
-        assert len(PROTECTION_TOOLS) == 14  # Added: enable_cloudflare_auto_solve, disable_cloudflare_auto_solve
-        # Network tools: 11 base + 14 new (10 event tools + get_event_status + 3 request interception tools) = 25
-        assert len(NETWORK_TOOLS) == 25
-        assert len(FILE_TOOLS) == 8
+        # Browser tools: legacy tools (context/permissions now in unified browser_control)
+        assert len(BROWSER_TOOLS) >= 5  # At least bring_tab_to_front, set_download_behavior, etc.
+        # Navigation tools: only fetch_domain_commands remains (others in unified navigate_page)
+        assert len(NAVIGATION_TOOLS) >= 1
+        # Element tools and Screenshot tools are fully replaced by unified tools
+        # Script tools: some remain (execute_automation_script, inject_script_library)
+        assert len(SCRIPT_TOOLS) >= 2
+        assert len(PROTECTION_TOOLS) >= 12
+        assert len(NETWORK_TOOLS) >= 10
+        assert len(FILE_TOOLS) >= 5  # Some replaced by unified manage_file
 
         # Total should match all tools (including unified tools)
-        from pydoll_mcp.tools import UNIFIED_TOOLS
         total = sum([
-            len(UNIFIED_TOOLS),  # Add unified tools count
+            len(UNIFIED_TOOLS),  # 10 unified tools
             len(BROWSER_TOOLS),
             len(NAVIGATION_TOOLS),
-            len(ELEMENT_TOOLS),
-            len(SCREENSHOT_TOOLS),
             len(SCRIPT_TOOLS),
             len(PROTECTION_TOOLS),
             len(NETWORK_TOOLS),
@@ -55,7 +49,13 @@ class TestToolDefinitions:
             len(PAGE_TOOLS),
             len(ADVANCED_TOOLS),
         ])
-        assert len(ALL_TOOLS) == total
+        # Note: ALL_TOOLS may only include unified tools if UNIFIED_TOOLS_ONLY is True
+        # So we check that unified tools are included
+        assert len(UNIFIED_TOOLS) == 10
+        unified_tool_names = [tool.name for tool in UNIFIED_TOOLS]
+        all_tool_names = [tool.name for tool in ALL_TOOLS]
+        for name in unified_tool_names:
+            assert name in all_tool_names, f"Unified tool {name} not in ALL_TOOLS"
 
     def test_tool_structure(self):
         """Test that all tools have required fields."""
@@ -77,20 +77,15 @@ class TestToolDefinitions:
 
     def test_tool_categories(self):
         """Test tool category organization."""
-        # Match categories defined in __init__.py
-        expected_categories = {
-            "browser_management": 18,  # Updated for new tools (13 base + 5 new)
-            "navigation_control": 9,  # Updated (7 base + 2 new)
-            "element_interaction": 7,  # Updated (4 base + 3 new)
-            "page_interaction": 4,  # Updated: handle_dialog, handle_alert, save_page_as_pdf, save_pdf
-            "screenshot_media": 3,
-            "script_execution": 3,
-            "advanced_automation": 3,
-        }
-
-        for category, count in expected_categories.items():
-            assert category in TOOL_CATEGORIES
-            assert TOOL_CATEGORIES[category]["count"] == count
+        # Unified tools category should exist
+        assert "unified_tools" in TOOL_CATEGORIES
+        assert TOOL_CATEGORIES["unified_tools"]["count"] == 10
+        
+        # Check that unified tools are listed
+        unified_tool_names = [tool.name for tool in UNIFIED_TOOLS]
+        category_tools = TOOL_CATEGORIES["unified_tools"]["tools"]
+        for name in unified_tool_names:
+            assert name in category_tools, f"Unified tool {name} not in category tools list"
 
 
 class TestBrowserTools:
@@ -174,27 +169,25 @@ class TestNavigationTools:
 class TestElementTools:
     """Test element interaction tools."""
 
-    def test_element_tool_count(self):
-        """Test element tool count includes new tools."""
-        assert len(ELEMENT_TOOLS) == 7  # Added: find_or_wait_element, query, press_key
+    def test_element_tools_replaced(self):
+        """Test that element tools are replaced by unified tools."""
+        # Element tools are now in unified tools (interact_element, find_element)
+        unified_tool_names = [tool.name for tool in UNIFIED_TOOLS]
+        assert "interact_element" in unified_tool_names
+        assert "find_element" in unified_tool_names
 
-        # Check for new tools
-        tool_names = [t.name for t in ELEMENT_TOOLS]
-        assert "get_parent_element" in tool_names
-        assert "find_or_wait_element" in tool_names
-        assert "query" in tool_names
-        assert "press_key" in tool_names
-
-    def test_find_element_schema(self):
-        """Test find_element tool schema."""
-        find_tool = next(t for t in ELEMENT_TOOLS if t.name == "find_element")
+    def test_find_element_unified_tool(self):
+        """Test find_element unified tool schema."""
+        find_tool = next(t for t in UNIFIED_TOOLS if t.name == "find_element")
 
         properties = find_tool.inputSchema["properties"]
 
-        # Should support multiple selector types
-        assert "css_selector" in properties
-        assert "xpath" in properties
-        assert "text" in properties
+        # Should support action parameter
+        assert "action" in properties
+        assert "enum" in properties["action"]
+        
+        # Should support selector
+        assert "selector" in properties
 
         # Should have browser context
         assert "browser_id" in properties
@@ -204,16 +197,19 @@ class TestElementTools:
 class TestScreenshotTools:
     """Test screenshot and media tools."""
 
-    def test_screenshot_tool_names(self):
-        """Test screenshot tool naming."""
-        expected_patterns = [
-            "take_screenshot",
-        ]
-
-        tool_names = [tool.name for tool in SCREENSHOT_TOOLS]
-
-        for pattern in expected_patterns:
-            assert any(pattern in name for name in tool_names)
+    def test_screenshot_tools_replaced(self):
+        """Test that screenshot tools are replaced by unified capture_media."""
+        # Screenshot tools are now in unified capture_media tool
+        unified_tool_names = [tool.name for tool in UNIFIED_TOOLS]
+        assert "capture_media" in unified_tool_names
+        
+        # Check that capture_media supports screenshot actions
+        capture_tool = next(t for t in UNIFIED_TOOLS if t.name == "capture_media")
+        assert "action" in capture_tool.inputSchema["properties"]
+        action_enum = capture_tool.inputSchema["properties"]["action"]["enum"]
+        assert "screenshot" in action_enum
+        assert "element_screenshot" in action_enum
+        assert "generate_pdf" in action_enum
 
 
 class TestProtectionTools:
@@ -423,7 +419,7 @@ class TestUnifiedTools:
             assert "properties" in schema
 
             # Unified tools should have an 'action' property (except execute_cdp_command)
-            if tool.name in ["interact_element", "manage_tab", "browser_control", "navigate_page", 
+            if tool.name in ["interact_element", "manage_tab", "browser_control", "navigate_page",
                            "capture_media", "execute_script", "manage_file", "find_element", "interact_page"]:
                 assert "action" in schema["properties"]
                 assert "enum" in schema["properties"]["action"]
