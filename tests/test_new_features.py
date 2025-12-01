@@ -447,10 +447,10 @@ class TestToolRegistration:
     """Test that all new tools are properly registered."""
 
     def test_page_tool_handlers_registered(self):
-        """Test that new page tools are registered."""
-        assert "handle_alert" in PAGE_TOOL_HANDLERS
-        assert "save_pdf" in PAGE_TOOL_HANDLERS
-        assert "handle_dialog" in PAGE_TOOL_HANDLERS
+        """Test that page tools are registered."""
+        # Note: handle_alert, handle_dialog, save_pdf removed - use unified tools instead
+        # PAGE_TOOLS is now empty as all tools moved to unified tools
+        assert isinstance(PAGE_TOOL_HANDLERS, dict)
 
     def test_browser_tool_handlers_registered(self):
         """Test that new browser tools are registered."""
