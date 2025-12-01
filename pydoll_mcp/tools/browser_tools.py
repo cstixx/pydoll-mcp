@@ -119,100 +119,10 @@ BROWSER_TOOLS = [
             "required": ["browser_id"]
         }
     ),
-    Tool(
-        name="create_browser_context",
-        description="Create a new browser context (isolated profile) for multi-profile automation",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "context_name": {
-                    "type": "string",
-                    "description": "Optional name for the context"
-                }
-            },
-            "required": ["browser_id"]
-        }
-    ),
-    Tool(
-        name="list_browser_contexts",
-        description="List all browser contexts for a browser instance",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                }
-            },
-            "required": ["browser_id"]
-        }
-    ),
-    Tool(
-        name="delete_browser_context",
-        description="Delete a browser context",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "context_id": {
-                    "type": "string",
-                    "description": "Context ID to delete"
-                }
-            },
-            "required": ["browser_id", "context_id"]
-        }
-    ),
-    Tool(
-        name="grant_permissions",
-        description="Grant browser permissions (camera, microphone, geolocation, etc.) to a specific origin",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "origin": {
-                    "type": "string",
-                    "description": "URL origin to grant permissions for"
-                },
-                "permissions": {
-                    "type": "array",
-                    "items": {
-                        "type": "string",
-                        "enum": ["camera", "microphone", "geolocation", "notifications", "persistent-storage", "push", "midi", "midi-sysex", "background-sync", "ambient-light-sensor", "accelerometer", "gyroscope", "magnetometer", "accessibility-events", "clipboard-read", "clipboard-write", "payment-handler", "idle-detection", "periodic-background-sync"]
-                    },
-                    "description": "List of permissions to grant"
-                }
-            },
-            "required": ["browser_id", "origin", "permissions"]
-        }
-    ),
-    Tool(
-        name="reset_permissions",
-        description="Reset browser permissions for a specific origin or all origins",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "origin": {
-                    "type": "string",
-                    "description": "Optional URL origin to reset permissions for. If not provided, resets all permissions"
-                }
-            },
-            "required": ["browser_id"]
-        }
-    )
+    # Note: create_browser_context, list_browser_contexts, delete_browser_context
+    # have been removed - use unified tool: browser_control with create_context, list_contexts, delete_context actions
+    # Note: grant_permissions, reset_permissions
+    # have been removed - use unified tool: browser_control with grant_permissions, reset_permissions actions
 ]
 
 
@@ -1306,7 +1216,8 @@ async def handle_reset_permissions(arguments: Dict[str, Any]) -> Sequence[TextCo
 
 
 # Browser Tool Handlers Dictionary
-# Note: Handlers for start_browser, stop_browser, list_browsers, get_browser_status, new_tab, close_tab, list_tabs, set_active_tab
+# Note: Handlers for start_browser, stop_browser, list_browsers, get_browser_status, new_tab, close_tab, list_tabs, set_active_tab,
+# create_browser_context, list_browser_contexts, delete_browser_context, grant_permissions, reset_permissions
 # are kept as internal functions (used by unified tools) but removed from public API
 BROWSER_TOOL_HANDLERS = {
     "bring_tab_to_front": handle_bring_tab_to_front,
@@ -1314,9 +1225,6 @@ BROWSER_TOOL_HANDLERS = {
     "set_download_path": handle_set_download_path,
     "enable_file_chooser_interception": handle_enable_file_chooser_interception,
     "disable_file_chooser_interception": handle_disable_file_chooser_interception,
-    "create_browser_context": handle_create_browser_context,
-    "list_browser_contexts": handle_list_browser_contexts,
-    "delete_browser_context": handle_delete_browser_context,
-    "grant_permissions": handle_grant_permissions,
-    "reset_permissions": handle_reset_permissions,
+    # Note: create_browser_context, list_browser_contexts, delete_browser_context, grant_permissions, reset_permissions
+    # handlers removed from public API - use unified browser_control tool instead
 }

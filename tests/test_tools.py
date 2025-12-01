@@ -96,11 +96,11 @@ class TestBrowserTools:
         # Most browser tools are now in unified tools (browser_control, manage_tab)
         # Only a few legacy tools remain in BROWSER_TOOLS
         actual_names = [tool.name for tool in BROWSER_TOOLS]
-        
+
         # Check that legacy tools that remain are present
         assert "bring_tab_to_front" in actual_names
         assert "set_download_behavior" in actual_names
-        
+
         # Check that unified tools have browser control capabilities
         unified_tool_names = [tool.name for tool in UNIFIED_TOOLS]
         assert "browser_control" in unified_tool_names
@@ -144,7 +144,7 @@ class TestNavigationTools:
         # Check that it supports navigate action
         assert "action" in properties
         assert "navigate" in properties["action"]["enum"]
-        
+
         # Check required fields
         assert "action" in required
         assert "browser_id" in required

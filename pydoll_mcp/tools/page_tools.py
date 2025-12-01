@@ -15,108 +15,9 @@ from ..models import OperationResult
 logger = logging.getLogger(__name__)
 
 # Page Tools Definition
-PAGE_TOOLS = [
-    Tool(
-        name="handle_dialog",
-        description="Handle JavaScript dialogs like alert, confirm, or prompt.",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "tab_id": {
-                    "type": "string",
-                    "description": "Optional tab ID, uses active tab if not specified"
-                },
-                "accept": {
-                    "type": "boolean",
-                    "description": "Whether to accept or dismiss the dialog.",
-                    "default": True
-                },
-                "prompt_text": {
-                    "type": "string",
-                    "description": "Text to enter into the prompt dialog."
-                }
-            },
-            "required": ["browser_id"]
-        }
-    ),
-    Tool(
-        name="handle_alert",
-        description="Dismiss or accept JavaScript alert/confirm dialogs (simplified interface for alert handling).",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "tab_id": {
-                    "type": "string",
-                    "description": "Optional tab ID, uses active tab if not specified"
-                },
-                "accept": {
-                    "type": "boolean",
-                    "description": "Whether to accept (OK) or dismiss (Cancel) the alert. Defaults to True (accept).",
-                    "default": True
-                }
-            },
-            "required": ["browser_id"]
-        }
-    ),
-    Tool(
-        name="save_page_as_pdf",
-        description="Save the current page as a PDF file.",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "tab_id": {
-                    "type": "string",
-                    "description": "Optional tab ID, uses active tab if not specified"
-                }
-            },
-            "required": ["browser_id"]
-        }
-    ),
-    Tool(
-        name="save_pdf",
-        description="Save the current page as a PDF file with enhanced options (alias for save_page_as_pdf with file saving support).",
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "browser_id": {
-                    "type": "string",
-                    "description": "Browser instance ID"
-                },
-                "tab_id": {
-                    "type": "string",
-                    "description": "Optional tab ID, uses active tab if not specified"
-                },
-                "file_path": {
-                    "type": "string",
-                    "description": "Optional file path to save PDF. If not provided, returns base64 encoded PDF data."
-                },
-                "format": {
-                    "type": "string",
-                    "description": "Paper format (A4, Letter, etc.). Defaults to A4.",
-                    "default": "A4"
-                },
-                "print_background": {
-                    "type": "boolean",
-                    "description": "Whether to print background graphics. Defaults to True.",
-                    "default": True
-                }
-            },
-            "required": ["browser_id"]
-        }
-    ),
-]
+# Note: handle_dialog, handle_alert, save_page_as_pdf, save_pdf have been removed
+# Use unified tools: interact_page (for dialogs) and capture_media (for PDFs) instead
+PAGE_TOOLS = []
 
 # Page Tool Handlers
 async def handle_handle_dialog(arguments: Dict[str, Any]) -> Sequence[TextContent]:
@@ -317,9 +218,7 @@ async def handle_save_pdf(arguments: Dict[str, Any]) -> Sequence[TextContent]:
         return [TextContent(type="text", text=result.json())]
 
 # Page Tool Handlers Dictionary
-PAGE_TOOL_HANDLERS = {
-    "handle_dialog": handle_handle_dialog,
-    "handle_alert": handle_handle_alert,
-    "save_page_as_pdf": handle_save_page_as_pdf,
-    "save_pdf": handle_save_pdf,
-}
+# Note: handle_dialog, handle_alert, save_page_as_pdf, save_pdf handlers removed from public API
+# Use unified tools: interact_page (for dialogs) and capture_media (for PDFs) instead
+# Handler functions are kept as internal functions (used by unified tools)
+PAGE_TOOL_HANDLERS = {}
