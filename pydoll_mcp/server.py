@@ -24,7 +24,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
-from . import __version__, BANNER, health_check, print_banner
+from . import __version__, health_check, print_banner
 from .core import get_browser_manager
 
 # Initialize tool variables with defaults (will be overwritten on successful import)
