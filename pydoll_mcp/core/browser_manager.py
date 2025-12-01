@@ -147,18 +147,31 @@ class BrowserInstance:
         try:
             logger.info(f"Cleaning up browser instance {self.instance_id}")
 
-            # Close all tabs
+            # Close all tabs with timeout
             for tab_id, tab in list(self.tabs.items()):
                 try:
-                    await tab.close()
+                    await asyncio.wait_for(
+                        tab.close(),
+                        timeout=5.0
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning(f"Tab {tab_id} close timed out")
                 except Exception as e:
                     logger.warning(f"Error closing tab {tab_id}: {e}")
 
             self.tabs.clear()
 
-            # Stop browser
+            # Stop browser with timeout
             if self.browser and hasattr(self.browser, 'stop'):
-                await self.browser.stop()
+                try:
+                    await asyncio.wait_for(
+                        self.browser.stop(),
+                        timeout=10.0
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning(f"Browser stop timed out for {self.instance_id}")
+                except Exception as e:
+                    logger.warning(f"Error stopping browser: {e}")
 
             self.is_active = False
             logger.info(f"Browser instance {self.instance_id} cleaned up successfully")
@@ -541,8 +554,16 @@ class BrowserManager:
                 raise ValueError(f"Unsupported browser type: {browser_type}")
 
             # Start browser - browser.start() returns the initial Tab
+            # Add timeout to prevent hanging if browser doesn't start
             start_time = time.time()
-            initial_tab = await browser.start()
+            try:
+                initial_tab = await asyncio.wait_for(
+                    browser.start(),
+                    timeout=30.0  # 30 second timeout for browser startup
+                )
+            except asyncio.TimeoutError:
+                logger.error(f"Browser startup timed out after 30 seconds for {browser_id}")
+                raise RuntimeError(f"Browser startup timed out after 30 seconds")
             startup_time = time.time() - start_time
 
             # Create browser instance
@@ -560,12 +581,21 @@ class BrowserManager:
                 logger.info(f"Registered initial tab from browser.start(): {default_tab_id}")
 
                 # Enhanced Windows compatibility: Wait for tab to be fully ready
-                try:
-                    await asyncio.sleep(1)  # Give tab time to initialize
-                    # Try to get tab title to ensure it's ready
-                    await self._ensure_tab_ready(initial_tab, default_tab_id)
-                except Exception as e:
-                    logger.warning(f"Tab initialization check failed: {e}")
+                # Run readiness check in background to avoid blocking browser creation
+                async def check_tab_readiness():
+                    try:
+                        await asyncio.sleep(0.5)  # Give tab time to initialize
+                        # Try to get tab title to ensure it's ready (with timeout)
+                        await asyncio.wait_for(
+                            self._ensure_tab_ready(initial_tab, default_tab_id, timeout=3.0),
+                            timeout=4.0  # Slightly longer than _ensure_tab_ready timeout
+                        )
+                    except (asyncio.TimeoutError, Exception) as e:
+                        logger.debug(f"Tab initialization check completed with: {e}")
+
+                # Don't wait for readiness check - let it run in background
+                # This prevents hanging if the tab isn't ready yet
+                asyncio.create_task(check_tab_readiness())
             else:
                 # This should never happen with PyDoll
                 logger.error("CRITICAL: No initial tab returned from browser.start() - this is unexpected!")
@@ -599,8 +629,12 @@ class BrowserManager:
             # Save initial tab to SessionStore
             if initial_tab:
                 try:
-                    url = await initial_tab.current_url() if hasattr(initial_tab, 'current_url') else None
-                    title = await initial_tab.page_title() if hasattr(initial_tab, 'page_title') else None
+                    url = None
+                    title = None
+                    if hasattr(initial_tab, 'current_url') and callable(initial_tab.current_url):
+                        url = await initial_tab.current_url()
+                    if hasattr(initial_tab, 'page_title') and callable(initial_tab.page_title):
+                        title = await initial_tab.page_title()
                 except Exception:
                     url = None
                     title = None
@@ -635,12 +669,19 @@ class BrowserManager:
         Returns:
             BrowserInstance if found, None otherwise
         """
-        # Check active cache first
+        # Check active cache first (fast path, no timeout needed)
         if browser_id in self._active_browsers:
             return self._active_browsers[browser_id]
 
-        # Try to reattach from SessionStore
-        return await self.reattach_browser(browser_id)
+        # Try to reattach from SessionStore with timeout
+        try:
+            return await asyncio.wait_for(
+                self.reattach_browser(browser_id),
+                timeout=5.0
+            )
+        except asyncio.TimeoutError:
+            logger.debug(f"get_browser timed out for {browser_id}")
+            return None
 
     async def get_tab(self, browser_id: str, tab_id: str):
         """Get a tab from a browser instance."""
@@ -840,7 +881,18 @@ class BrowserManager:
         Returns:
             BrowserInstance if reattachment successful, None otherwise
         """
-        browser_data = await self.session_store.get_browser(browser_id)
+        try:
+            browser_data = await asyncio.wait_for(
+                self.session_store.get_browser(browser_id),
+                timeout=5.0  # Quick timeout for database query
+            )
+        except asyncio.TimeoutError:
+            logger.warning(f"Session store query timed out for browser {browser_id}")
+            return None
+        except Exception as e:
+            logger.debug(f"Error querying session store for {browser_id}: {e}")
+            return None
+
         if not browser_data:
             return None
 
@@ -854,21 +906,35 @@ class BrowserManager:
         logger.debug(f"Browser {browser_id} found in SessionStore but reattachment not yet implemented")
         return None
 
-    async def _ensure_tab_ready(self, tab, tab_id: str):
-        """Enhanced tab readiness check for Windows compatibility."""
+    async def _ensure_tab_ready(self, tab, tab_id: str, timeout: float = 5.0):
+        """Enhanced tab readiness check for Windows compatibility.
+
+        Args:
+            tab: Tab object to check
+            tab_id: Tab identifier for logging
+            timeout: Maximum time to wait for tab readiness (default: 5 seconds)
+        """
         try:
-            # Try multiple methods to ensure tab is ready
+            # Try multiple methods to ensure tab is ready with timeout
             max_attempts = 5
+            attempt_timeout = timeout / max_attempts
+
             for attempt in range(max_attempts):
                 try:
-                    # Check if tab has basic properties
+                    # Check if tab has basic properties with timeout
                     if hasattr(tab, 'page_title'):
-                        title = await tab.page_title()
+                        title = await asyncio.wait_for(
+                            tab.page_title(),
+                            timeout=attempt_timeout
+                        )
                         logger.debug(f"Tab {tab_id} title: {title}")
                         break
                     elif hasattr(tab, 'execute_script'):
                         # Try to execute a simple script to verify tab is ready
-                        result = await tab.execute_script('return document.readyState;')
+                        result = await asyncio.wait_for(
+                            tab.execute_script('return document.readyState;'),
+                            timeout=attempt_timeout
+                        )
                         if result:
                             logger.debug(f"Tab {tab_id} ready state check passed")
                             break
@@ -876,6 +942,11 @@ class BrowserManager:
                         # Basic existence check
                         logger.debug(f"Tab {tab_id} basic existence check passed")
                         break
+                except asyncio.TimeoutError:
+                    if attempt == max_attempts - 1:
+                        logger.warning(f"Tab readiness check timed out after {max_attempts} attempts")
+                    else:
+                        await asyncio.sleep(0.5)  # Wait before retry
                 except Exception as e:
                     if attempt == max_attempts - 1:
                         logger.warning(f"Tab readiness check failed after {max_attempts} attempts: {e}")

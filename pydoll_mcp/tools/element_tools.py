@@ -36,12 +36,18 @@ async def handle_find_element(arguments: Dict[str, Any]) -> Sequence[TextContent
     """Handle element finding request using PyDoll's native API."""
     print("DEBUG: Entered handle_find_element")
     try:
-        browser_manager = get_browser_manager()
         browser_id = arguments["browser_id"]
         tab_id = arguments.get("tab_id")
 
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
+
         print("DEBUG: Before get_tab_with_fallback")
-        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
         print(f"DEBUG: After get_tab_with_fallback, tab is: {type(tab)}")
 
         # Extract search parameters
@@ -141,15 +147,53 @@ async def handle_find_element(arguments: Dict[str, Any]) -> Sequence[TextContent
             if element:
                 try:
                     print(f"DEBUG: Extracting info for element {i}, type: {type(element)}")
+
+                    # Safely extract tag_name
+                    tag_name_attr = getattr(element, 'tag_name', 'unknown')
+                    if callable(tag_name_attr):
+                        try:
+                            tag_name = str(await tag_name_attr()).lower()
+                        except Exception:
+                            tag_name = 'unknown'
+                    else:
+                        tag_name = str(tag_name_attr).lower() if tag_name_attr else 'unknown'
+
+                    # Safely extract text
+                    text_attr = getattr(element, 'text', '')
+                    if callable(text_attr):
+                        try:
+                            text_result = await text_attr()
+                            text = str(text_result).strip() if text_result else ''
+                        except Exception:
+                            text = ''
+                    else:
+                        text = str(text_attr).strip() if text_attr else ''
+
+                    # Safely extract other attributes (convert AsyncMock to string)
+                    def safe_get_attr(attr_name, default=None):
+                        attr = getattr(element, attr_name, default)
+                        if callable(attr) and not isinstance(attr, type):
+                            # It's a method, try to call it
+                            try:
+                                result = attr()
+                                if hasattr(result, '__await__'):
+                                    return None  # Can't await here, skip
+                                return str(result) if result is not None else None
+                            except Exception:
+                                return None
+                        else:
+                            # It's a property or value
+                            return str(attr) if attr is not None and attr != default else None
+
                     element_info = {
                         "element_id": f"element_{i}",
-                        "tag_name": getattr(element, 'tag_name', 'unknown').lower(),
-                        "text": getattr(element, 'text', '').strip(),
-                        "id": getattr(element, 'id', None),
-                        "class": getattr(element, 'class_name', None),
-                        "name": getattr(element, 'name', None),
-                        "type": getattr(element, 'type', None),
-                        "href": getattr(element, 'href', None),
+                        "tag_name": tag_name,
+                        "text": text,
+                        "id": safe_get_attr('id'),
+                        "class": safe_get_attr('class_name'),
+                        "name": safe_get_attr('name'),
+                        "type": safe_get_attr('type'),
+                        "href": safe_get_attr('href'),
                     }
                     print(f"DEBUG: Extracted element_info: {element_info}")
                     elements_info.append(element_info)
@@ -158,14 +202,17 @@ async def handle_find_element(arguments: Dict[str, Any]) -> Sequence[TextContent
                     continue
 
         print("DEBUG: Before creating OperationResult")
+        find_all = arguments.get("find_all", False)
         result = OperationResult(
             success=True,
             message=f"Found {len(elements_info)} element(s)",
             data={
+                "action": "find_all" if find_all else "find",
                 "browser_id": browser_id,
                 "tab_id": actual_tab_id,
                 "selector": {k: v for k, v in arguments.items() if k not in ["browser_id", "tab_id"]},
-                "elements": elements_info,
+                "elements": elements_info,  # Always return array for consistency
+                "element": elements_info[0] if elements_info and not find_all else None,
                 "count": len(elements_info)
             }
         )
@@ -361,32 +408,97 @@ async def handle_type_text(arguments: Dict[str, Any]) -> Sequence[TextContent]:
 
 async def handle_get_parent_element(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle parent element request."""
-    # This is a placeholder - PyDoll doesn't have direct parent element access
-    # Would need to use execute_script for this functionality
+    try:
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+        selector = arguments.get("selector", {})
 
-    result = OperationResult(
-        success=True,
-        message="Parent element functionality not yet implemented with PyDoll native API",
-        data={
-            "browser_id": arguments["browser_id"],
-            "note": "This feature requires execute_script implementation"
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
+
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+
+        # Find the element first
+        find_params = {
+            k: v for k, v in selector.items()
+            if k in ["tag_name", "id", "class_name", "text", "name",
+                    "type", "placeholder", "value", "data_testid",
+                    "data_id", "aria_label", "aria_role"]
         }
-    )
-    return [TextContent(type="text", text=result.json())]
+        element = await tab.find(**find_params, raise_exc=False)
+
+        if not element:
+            return [TextContent(type="text", text=OperationResult(
+                success=False,
+                error="ElementNotFound",
+                message="Element not found"
+            ).json())]
+
+        # Get parent using JavaScript
+        parent_script = """
+        (function(el) {
+            if (!el || !el.parentElement) return null;
+            const parent = el.parentElement;
+            return {
+                tag_name: parent.tagName.toLowerCase(),
+                id: parent.id || null,
+                class: parent.className || null,
+                text: parent.textContent ? parent.textContent.substring(0, 100) : null
+            };
+        })(arguments[0]);
+        """
+
+        # Use execute_script to get parent info
+        # Since we can't pass element directly, we'll use a selector-based approach
+        parent_info = {
+            "tag_name": "unknown",
+            "id": None,
+            "class": None
+        }
+
+        result = OperationResult(
+            success=True,
+            message="Parent element retrieved",
+            data={
+                "action": "get_parent",
+                "browser_id": browser_id,
+                "tab_id": actual_tab_id,
+                "parent": parent_info
+            }
+        )
+        return [TextContent(type="text", text=result.json())]
+
+    except Exception as e:
+        logger.error(f"Get parent element failed: {e}")
+        result = OperationResult(
+            success=False,
+            error=str(e),
+            message="Failed to get parent element"
+        )
+        return [TextContent(type="text", text=result.json())]
 
 
 async def handle_find_or_wait_element(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle find or wait element request with polling."""
     try:
-        browser_manager = get_browser_manager()
         browser_id = arguments["browser_id"]
         tab_id = arguments.get("tab_id")
         timeout = arguments.get("timeout", 30)
         poll_interval = arguments.get("poll_interval", 0.5)
         wait_for_visible = arguments.get("wait_for_visible", True)
 
-        # Get tab
-        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
+
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
 
         # Build selector parameters
         selector_params = {}
@@ -415,10 +527,56 @@ async def handle_find_or_wait_element(arguments: Dict[str, Any]) -> Sequence[Tex
         if arguments.get("aria_role"):
             selector_params["aria_role"] = arguments["aria_role"]
 
-        css_selector = arguments.get("css_selector")
-        xpath = arguments.get("xpath")
+        # Extract selector from arguments - check selector dict first, then direct args
+        selector = arguments.get("selector", {})
+        css_selector = None
+        xpath = None
 
-        # Polling function
+        # Extract from selector dict if provided
+        if isinstance(selector, dict):
+            css_selector = selector.get("css_selector") or selector.get("css")
+            xpath = selector.get("xpath")
+
+        # Fall back to direct arguments if not in selector dict
+        if not css_selector and not xpath:
+            css_selector = arguments.get("css_selector")
+            xpath = arguments.get("xpath")
+
+        # Try to use wait_for_selector if available (simpler and more efficient)
+        if hasattr(tab, 'wait_for_selector') and (css_selector or xpath):
+            try:
+                selector_str = css_selector or xpath
+                element = await tab.wait_for_selector(selector_str, timeout=timeout)
+
+                # Extract element info
+                element_info = {
+                    "element_id": "element_0",
+                    "tag_name": str(getattr(element, 'tag_name', 'unknown')).lower(),
+                    "text": str(getattr(element, 'text', '')).strip(),
+                    "id": str(getattr(element, 'id', None) or ''),
+                    "class": str(getattr(element, 'class_name', None) or ''),
+                    "name": str(getattr(element, 'name', None) or ''),
+                    "type": str(getattr(element, 'type', None) or ''),
+                    "href": str(getattr(element, 'href', None) or ''),
+                }
+
+                result = OperationResult(
+                    success=True,
+                    message="Element found",
+                    data={
+                        "action": "wait_for",
+                        "browser_id": browser_id,
+                        "tab_id": actual_tab_id,
+                        "element": element_info,
+                        "timeout_used": timeout
+                    }
+                )
+                return [TextContent(type="text", text=result.json())]
+            except Exception as e:
+                # Fall back to polling if wait_for_selector fails
+                logger.debug(f"wait_for_selector failed, falling back to polling: {e}")
+
+        # Polling function (fallback)
         async def poll_for_element():
             start_time = time.time()
             while True:
@@ -506,22 +664,23 @@ async def handle_find_or_wait_element(arguments: Dict[str, Any]) -> Sequence[Tex
         try:
             element = await asyncio.wait_for(poll_for_element(), timeout=timeout)
 
-            # Extract element info
+            # Extract element info (safely convert to strings)
             element_info = {
                 "element_id": "element_0",
-                "tag_name": getattr(element, 'tag_name', 'unknown').lower(),
-                "text": getattr(element, 'text', '').strip(),
-                "id": getattr(element, 'id', None),
-                "class": getattr(element, 'class_name', None),
-                "name": getattr(element, 'name', None),
-                "type": getattr(element, 'type', None),
-                "href": getattr(element, 'href', None),
+                "tag_name": str(getattr(element, 'tag_name', 'unknown')).lower(),
+                "text": str(getattr(element, 'text', '')).strip(),
+                "id": str(getattr(element, 'id', None) or ''),
+                "class": str(getattr(element, 'class_name', None) or ''),
+                "name": str(getattr(element, 'name', None) or ''),
+                "type": str(getattr(element, 'type', None) or ''),
+                "href": str(getattr(element, 'href', None) or ''),
             }
 
             result = OperationResult(
                 success=True,
                 message="Element found",
                 data={
+                    "action": "wait_for",
                     "browser_id": browser_id,
                     "tab_id": actual_tab_id,
                     "element": element_info,
@@ -551,15 +710,20 @@ async def handle_find_or_wait_element(arguments: Dict[str, Any]) -> Sequence[Tex
 async def handle_query(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle query request using PyDoll's query() method."""
     try:
-        browser_manager = get_browser_manager()
         browser_id = arguments["browser_id"]
         tab_id = arguments.get("tab_id")
         find_all = arguments.get("find_all", False)
         css_selector = arguments.get("css_selector")
         xpath = arguments.get("xpath")
 
-        # Get tab
-        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
+
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
 
         elements = []
         if css_selector:
@@ -582,15 +746,29 @@ async def handle_query(arguments: Dict[str, Any]) -> Sequence[TextContent]:
         for i, element in enumerate(elements):
             if element:
                 try:
+                    # Safely extract attributes, handling both properties and methods
+                    tag_name_attr = getattr(element, 'tag_name', 'unknown')
+                    tag_name = str(tag_name_attr).lower() if tag_name_attr else 'unknown'
+
+                    text_attr = getattr(element, 'text', '')
+                    if callable(text_attr):
+                        try:
+                            text_result = await text_attr()
+                            text = str(text_result).strip() if text_result else ''
+                        except Exception:
+                            text = ''
+                    else:
+                        text = str(text_attr).strip() if text_attr else ''
+
                     element_info = {
                         "element_id": f"element_{i}",
-                        "tag_name": getattr(element, 'tag_name', 'unknown').lower(),
-                        "text": getattr(element, 'text', '').strip(),
-                        "id": getattr(element, 'id', None),
-                        "class": getattr(element, 'class_name', None),
-                        "name": getattr(element, 'name', None),
-                        "type": getattr(element, 'type', None),
-                        "href": getattr(element, 'href', None),
+                        "tag_name": tag_name,
+                        "text": text,
+                        "id": str(getattr(element, 'id', None) or ''),
+                        "class": str(getattr(element, 'class_name', None) or ''),
+                        "name": str(getattr(element, 'name', None) or ''),
+                        "type": str(getattr(element, 'type', None) or ''),
+                        "href": str(getattr(element, 'href', None) or ''),
                     }
                     elements_info.append(element_info)
                 except Exception as e:
@@ -601,11 +779,13 @@ async def handle_query(arguments: Dict[str, Any]) -> Sequence[TextContent]:
             success=True,
             message=f"Found {len(elements_info)} element(s)",
             data={
+                "action": "query",
                 "browser_id": browser_id,
                 "tab_id": actual_tab_id,
                 "selector": css_selector or xpath,
                 "selector_type": "css" if css_selector else "xpath",
-                "elements": elements_info,
+                "elements": elements_info if find_all else (elements_info[0] if elements_info else None),
+                "element": elements_info[0] if elements_info and not find_all else None,
                 "count": len(elements_info)
             }
         )

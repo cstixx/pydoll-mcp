@@ -33,8 +33,10 @@ class SessionStore:
         settings = get_settings()
         self.db_path = db_path or settings.session_db_path
         self._lock = asyncio.Lock()
+        self._init_lock = asyncio.Lock()  # Separate lock for initialization
         self._connection: Optional[sqlite3.Connection] = None
         self._initialized = False
+        self._initializing = False  # Track if initialization is in progress
 
         # Ensure database directory exists
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -47,78 +49,104 @@ class SessionStore:
         Returns:
             sqlite3.Connection: Database connection
         """
-        if self._connection is None:
-            # SQLite connections are thread-safe but we use async lock for safety
-            self._connection = sqlite3.connect(
-                str(self.db_path),
-                check_same_thread=False,
-                timeout=30.0
-            )
-            self._connection.row_factory = sqlite3.Row
-            await self._initialize_schema()
+        # Fast path: connection already exists
+        if self._connection is not None:
+            return self._connection
+
+        # Use lock to prevent race condition in connection creation
+        async with self._init_lock:
+            # Double-check after acquiring lock
+            if self._connection is not None:
+                return self._connection
+
+            # Create connection
+            try:
+                self._connection = sqlite3.connect(
+                    str(self.db_path),
+                    check_same_thread=False,
+                    timeout=5.0  # Reduced timeout to prevent hanging
+                )
+                self._connection.row_factory = sqlite3.Row
+            except sqlite3.Error as e:
+                logger.error(f"Failed to create database connection: {e}")
+                self._connection = None
+                raise
+
+            # Initialize schema after connection is created (only once)
+            if not self._initialized and not self._initializing:
+                self._initializing = True
+                try:
+                    await self._initialize_schema()
+                finally:
+                    self._initializing = False
+
         return self._connection
 
     async def _initialize_schema(self):
-        """Initialize database schema if not already initialized."""
+        """Initialize database schema if not already initialized.
+
+        This method should only be called while holding _init_lock.
+        """
         if self._initialized:
             return
 
-        async with self._lock:
-            if self._initialized:
-                return
+        # Use existing connection, don't call _get_connection to avoid recursion
+        if self._connection is None:
+            logger.error("Cannot initialize schema: connection is None")
+            return
 
-            conn = await self._get_connection()
-            cursor = conn.cursor()
+        conn = self._connection
+        cursor = conn.cursor()
 
-            # Create browsers table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS browsers (
-                    browser_id TEXT PRIMARY KEY,
-                    browser_type TEXT NOT NULL,
-                    debug_port INTEGER,
-                    pid INTEGER,
-                    created_at TEXT NOT NULL,
-                    last_activity TEXT NOT NULL,
-                    is_active INTEGER NOT NULL DEFAULT 1,
-                    config_json TEXT
-                )
-            """)
+        # Create browsers table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS browsers (
+                browser_id TEXT PRIMARY KEY,
+                browser_type TEXT NOT NULL,
+                debug_port INTEGER,
+                pid INTEGER,
+                created_at TEXT NOT NULL,
+                last_activity TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                config_json TEXT
+            )
+        """)
 
-            # Create tabs table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS tabs (
-                    tab_id TEXT PRIMARY KEY,
-                    browser_id TEXT NOT NULL,
-                    url TEXT,
-                    title TEXT,
-                    created_at TEXT NOT NULL,
-                    last_activity TEXT NOT NULL,
-                    is_active INTEGER NOT NULL DEFAULT 1,
-                    FOREIGN KEY (browser_id) REFERENCES browsers(browser_id) ON DELETE CASCADE
-                )
-            """)
+        # Create tabs table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tabs (
+                tab_id TEXT PRIMARY KEY,
+                browser_id TEXT NOT NULL,
+                url TEXT,
+                title TEXT,
+                created_at TEXT NOT NULL,
+                last_activity TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                FOREIGN KEY (browser_id) REFERENCES browsers(browser_id) ON DELETE CASCADE
+            )
+        """)
 
-            # Create session_metadata table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS session_metadata (
-                    key TEXT PRIMARY KEY,
-                    value TEXT NOT NULL
-                )
-            """)
+        # Create session_metadata table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS session_metadata (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )
+        """)
 
-            # Create indexes for better performance
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_browsers_active
-                ON browsers(is_active, last_activity)
-            """)
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_tabs_browser_id
-                ON tabs(browser_id, is_active)
-            """)
+        # Create indexes for better performance
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_browsers_active
+            ON browsers(is_active, last_activity)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_tabs_browser_id
+            ON tabs(browser_id, is_active)
+        """)
 
-            conn.commit()
-            self._initialized = True
-            logger.debug("Database schema initialized")
+        conn.commit()
+        self._initialized = True
+        logger.debug("Database schema initialized")
 
     async def save_browser(
         self,

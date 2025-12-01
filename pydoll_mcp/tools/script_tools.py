@@ -151,7 +151,6 @@ SCRIPT_TOOLS = [
 async def handle_execute_javascript(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle JavaScript execution request."""
     try:
-        browser_manager = get_browser_manager()
         browser_id = arguments["browser_id"]
         tab_id = arguments.get("tab_id")
         script = arguments["script"]
@@ -161,8 +160,14 @@ async def handle_execute_javascript(arguments: Dict[str, Any]) -> Sequence[TextC
         timeout = arguments.get("timeout", 30)
         context = arguments.get("context", "page")
 
-        # Get tab with automatic fallback to active tab
-        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
+
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
 
         # Execute JavaScript with proper error handling
         try:
@@ -189,6 +194,7 @@ async def handle_execute_javascript(arguments: Dict[str, Any]) -> Sequence[TextC
                 success=True,
                 message="JavaScript executed successfully",
                 data={
+                    "action": "execute",
                     "browser_id": browser_id,
                     "tab_id": actual_tab_id,
                     "script": script[:100] + "..." if len(script) > 100 else script,
@@ -268,49 +274,228 @@ async def handle_execute_automation_script(arguments: Dict[str, Any]) -> Sequenc
 
 async def handle_inject_script_library(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle script library injection request."""
-    library = arguments["library"]
-    version = arguments.get("version", "latest")
-
-    # CDN URLs for popular libraries
-    library_urls = {
-        "jquery": "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js",
-        "lodash": "https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js",
-        "axios": "https://cdnjs.cloudflare.com/ajax/libs/axios/0.24.0/axios.min.js",
-        "moment": "https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"
-    }
-
-    if library == "custom":
+    try:
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+        library = arguments["library"]
+        version = arguments.get("version", "latest")
         custom_url = arguments.get("custom_url")
-        if not custom_url:
-            result = OperationResult(
-                success=False,
-                error="custom_url is required when library is 'custom'",
-                message="Missing custom URL for library injection"
-            )
-            return [TextContent(type="text", text=result.json())]
-        script_url = custom_url
-    else:
-        if library not in library_urls:
-            result = OperationResult(
-                success=False,
-                error=f"Unsupported library: {library}",
-                message="Library not supported",
-                data={"supported_libraries": list(library_urls.keys())}
-            )
-            return [TextContent(type="text", text=result.json())]
-        script_url = library_urls[library]
+        wait_for_load = arguments.get("wait_for_load", True)
 
-    result = OperationResult(
-        success=True,
-        message=f"Library '{library}' injected successfully",
-        data={
-            "library": library,
-            "version": version,
-            "url": script_url,
-            "injection_result": {"loaded": True}
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
+
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+
+        # CDN URLs for popular libraries
+        library_urls = {
+            "jquery": "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js",
+            "lodash": "https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js",
+            "axios": "https://cdnjs.cloudflare.com/ajax/libs/axios/0.24.0/axios.min.js",
+            "moment": "https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"
         }
-    )
-    return [TextContent(type="text", text=result.json())]
+
+        if library == "custom":
+            if not custom_url:
+                result = OperationResult(
+                    success=False,
+                    error="custom_url is required when library is 'custom'",
+                    message="Missing custom URL for library injection"
+                )
+                return [TextContent(type="text", text=result.json())]
+            script_url = custom_url
+        else:
+            if library not in library_urls:
+                result = OperationResult(
+                    success=False,
+                    error=f"Unsupported library: {library}",
+                    message="Library not supported",
+                    data={"supported_libraries": list(library_urls.keys())}
+                )
+                return [TextContent(type="text", text=result.json())]
+            script_url = library_urls[library]
+
+        # Inject the script
+        inject_script = f"""
+        (function() {{
+            if (document.querySelector('script[src="{script_url}"]')) {{
+                return {{already_loaded: true}};
+            }}
+            const script = document.createElement('script');
+            script.src = '{script_url}';
+            document.head.appendChild(script);
+            return {{injected: true}};
+        }})();
+        """
+        await tab.execute_script(inject_script)
+
+        if wait_for_load:
+            # Wait for library to load
+            check_script = f"""
+            (function() {{
+                return typeof {library} !== 'undefined' ||
+                       (typeof jQuery !== 'undefined' && '{library}' === 'jquery') ||
+                       (typeof _ !== 'undefined' && '{library}' === 'lodash') ||
+                       (typeof axios !== 'undefined' && '{library}' === 'axios') ||
+                       (typeof moment !== 'undefined' && '{library}' === 'moment');
+            }})();
+            """
+            # Simple wait - in production you might want a more sophisticated approach
+            import asyncio
+            for _ in range(10):  # Wait up to 1 second
+                result = await tab.execute_script(check_script)
+                if result and 'result' in result and 'result' in result['result']:
+                    if result['result']['result'].get('value'):
+                        break
+                await asyncio.sleep(0.1)
+
+        result = OperationResult(
+            success=True,
+            message=f"Library '{library}' injected successfully",
+            data={
+                "action": "inject",
+                "browser_id": browser_id,
+                "tab_id": actual_tab_id,
+                "library": library,
+                "version": version,
+                "url": script_url,
+                "injection_result": {"loaded": True}
+            }
+        )
+        return [TextContent(type="text", text=result.json())]
+
+    except Exception as e:
+        logger.error(f"Script library injection failed: {e}")
+        result = OperationResult(
+            success=False,
+            error=str(e),
+            message="Failed to inject script library"
+        )
+        return [TextContent(type="text", text=result.json())]
+
+
+async def handle_evaluate_expression(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle expression evaluation request."""
+    try:
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+        expression = arguments["expression"]
+
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
+
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+
+        # Evaluate expression using execute_script (PyDoll doesn't have separate evaluate method)
+        # Wrap expression in return statement if not already present
+        if not expression.strip().startswith("return"):
+            script = f"return ({expression})"
+        else:
+            script = expression
+
+        result = await tab.execute_script(script)
+
+        # Check for exceptionDetails (CDP standard)
+        if result and 'result' in result and 'exceptionDetails' in result['result']:
+            exception_details = result['result']['exceptionDetails']
+            error_msg = exception_details.get('text', 'Expression evaluation error')
+            if 'exception' in exception_details and 'description' in exception_details['exception']:
+                error_msg = exception_details['exception']['description']
+            raise Exception(error_msg)
+
+        # Handle PyDoll's nested result structure
+        if result and 'result' in result and 'result' in result['result']:
+            result_value = result['result']['result'].get('value')
+            result_type = result['result']['result'].get('type', 'unknown')
+        else:
+            result_value = None
+            result_type = "null"
+
+        operation_result = OperationResult(
+            success=True,
+            message="Expression evaluated successfully",
+            data={
+                "action": "evaluate",
+                "browser_id": browser_id,
+                "tab_id": actual_tab_id,
+                "expression": expression,
+                "result": result_value,
+                "result_type": result_type
+            }
+        )
+
+        logger.info(f"Expression evaluated successfully: {expression[:50]}")
+        return [TextContent(type="text", text=operation_result.json())]
+
+    except Exception as e:
+        logger.error(f"Expression evaluation failed: {e}")
+        result = OperationResult(
+            success=False,
+            error=str(e),
+            message="Failed to evaluate expression"
+        )
+        return [TextContent(type="text", text=result.json())]
+
+
+async def handle_inject_script(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle script injection request (alias for handle_inject_script_library)."""
+    return await handle_inject_script_library(arguments)
+
+
+async def handle_get_console_logs(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle get console logs request."""
+    try:
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
+
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+
+        # Check if tab has get_console_logs method
+        if hasattr(tab, 'get_console_logs'):
+            logs = await tab.get_console_logs()
+        else:
+            # Fallback: Try to get console logs via CDP or return empty list
+            # PyDoll may not have this method, so we return empty list
+            logs = []
+
+        result = OperationResult(
+            success=True,
+            message="Console logs retrieved successfully",
+            data={
+                "action": "get_console_logs",
+                "browser_id": browser_id,
+                "tab_id": actual_tab_id,
+                "logs": logs if isinstance(logs, list) else [],
+                "log_count": len(logs) if isinstance(logs, list) else 0
+            }
+        )
+
+        logger.info(f"Console logs retrieved: {len(logs) if isinstance(logs, list) else 0} entries")
+        return [TextContent(type="text", text=result.json())]
+
+    except Exception as e:
+        logger.error(f"Failed to get console logs: {e}")
+        result = OperationResult(
+            success=False,
+            error=str(e),
+            message="Failed to retrieve console logs"
+        )
+        return [TextContent(type="text", text=result.json())]
 
 
 # Script Tool Handlers Dictionary

@@ -239,28 +239,37 @@ class TestAsyncOperations:
     @pytest.mark.asyncio
     async def test_browser_cleanup(self):
         """Test proper browser cleanup."""
-        browser_manager = BrowserManager()
 
-        # Mock browser instance
-        mock_instance = Mock()
-        mock_instance.cleanup = AsyncMock()
-        mock_instance.tabs = {"tab1": Mock(), "tab2": Mock()}
+
+        # Mock browser and tab objects
+        mock_tab = Mock()
+        mock_tab.page_title = AsyncMock(return_value="Test Page")
+        mock_tab.close = AsyncMock()
+        mock_tab.execute_script = AsyncMock(return_value="complete")
+
+        mock_browser = Mock()
+        mock_browser.start = AsyncMock(return_value=mock_tab)
+        mock_browser.stop = AsyncMock()
+        mock_browser.tab = mock_tab
+
+            # Mock session store to avoid database/file operations
+        mock_browser.list_browsers = AsyncMock(return_value=[])
+        mock_browser.delete_browser = AsyncMock()
+        mock_browser.save_browser = AsyncMock()
+
+
+        # Mock BrowserInstance
+        from pydoll_mcp.core import BrowserInstance
+        mock_instance = BrowserInstance(mock_browser, "chrome", "test_browser")
+        mock_instance.tabs["test_tab"] = mock_tab
         mock_instance.is_active = True
 
-        browser_manager._active_browsers["test_browser"] = mock_instance
+        # Call cleanup method which handles tab closing and browser stopping
+        await mock_instance.cleanup()
 
-        # Test cleanup - using stop() to ensure pool is cleared and cleanup called
-        await browser_manager.stop()
-
-        # Verify cleanup was called
-        # Depending on implementation, cleanup might be called by stop() -> cleanup_all() -> destroy_browser() -> pool.release()
-        # OR pool.clear() -> cleanup()
-        # Given the previous failure, let's verify either cleanup was called or browsers empty.
-
-        assert len(browser_manager._active_browsers) == 0
-
-        # We can't easily assert mock_instance.cleanup() called because it might be replaced or logic is complex with pool.
-        # But checking browsers list is empty is the main goal.
+        # Verify cleanup methods were called
+        mock_tab.close.assert_called_once()
+        mock_browser.stop.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_tab_context_manager(self):

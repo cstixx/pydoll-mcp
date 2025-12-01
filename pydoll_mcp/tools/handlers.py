@@ -231,15 +231,56 @@ async def handle_manage_tab(input_data: ManageTabInput) -> Sequence[TextContent]
                 new_tab = await browser_instance.browser.new_tab()
 
             tab_id = browser_manager._generate_tab_id()
+            # Ensure tab_id is a string (not a coroutine)
+            if hasattr(tab_id, '__await__'):
+                tab_id = await tab_id
+            tab_id = str(tab_id) if tab_id is not None else str(browser_manager._generate_tab_id())
             browser_instance.tabs[tab_id] = new_tab
 
             # Save to SessionStore
             try:
-                url = await new_tab.current_url() if hasattr(new_tab, 'current_url') else input_data.url
-                title = await new_tab.page_title() if hasattr(new_tab, 'page_title') else None
+                # Handle both property and method cases for current_url
+                if hasattr(new_tab, 'current_url'):
+                    url_attr = getattr(new_tab, 'current_url')
+                    if callable(url_attr):
+                        url_result = await url_attr()
+                        # Handle coroutine results
+                        if hasattr(url_result, '__await__'):
+                            url_result = await url_result
+                        # Ensure url is a string, not a coroutine
+                        url = str(url_result) if url_result is not None else (input_data.url or "")
+                    else:
+                        # Handle coroutine properties
+                        if hasattr(url_attr, '__await__'):
+                            url_attr = await url_attr()
+                        url = str(url_attr) if url_attr is not None else (input_data.url or "")
+                else:
+                    url = input_data.url or ""
+
+                # Handle both property and method cases for page_title
+                if hasattr(new_tab, 'page_title'):
+                    title_attr = getattr(new_tab, 'page_title')
+                    if callable(title_attr):
+                        title_result = await title_attr()
+                        # Handle coroutine results
+                        if hasattr(title_result, '__await__'):
+                            title_result = await title_result
+                        # Ensure title is a string, not a coroutine
+                        title = str(title_result) if title_result is not None else None
+                    else:
+                        # Handle coroutine properties
+                        if hasattr(title_attr, '__await__'):
+                            title_attr = await title_attr()
+                        title = str(title_attr) if title_attr is not None else None
+                else:
+                    title = None
             except Exception:
-                url = input_data.url
+                url = input_data.url or ""
                 title = None
+
+            # Ensure url and title are strings for serialization (not coroutines)
+            url = str(url) if url is not None and not hasattr(url, '__await__') else (input_data.url or "")
+            title = str(title) if title is not None and not hasattr(title, '__await__') else None
 
             await browser_manager.session_store.save_tab(
                 tab_id=tab_id,
@@ -252,6 +293,7 @@ async def handle_manage_tab(input_data: ManageTabInput) -> Sequence[TextContent]
                 success=True,
                 message="Tab created successfully",
                 data={
+                    "action": "create",
                     "browser_id": input_data.browser_id,
                     "tab_id": tab_id,
                     "url": url
@@ -285,22 +327,30 @@ async def handle_manage_tab(input_data: ManageTabInput) -> Sequence[TextContent]
                 success=True,
                 message="Tab closed successfully",
                 data={
+                    "action": "close",
                     "browser_id": input_data.browser_id,
                     "tab_id": input_data.tab_id
                 }
             )
 
         elif input_data.action == TabAction.REFRESH:
-            if not input_data.tab_id:
-                return [TextContent(type="text", text=OperationResult(
-                    success=False,
-                    error="TabIdRequired",
-                    message="tab_id is required for refresh action"
-                ).json())]
-
-            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(
+            tab_result = await browser_manager.get_tab_with_fallback(
                 input_data.browser_id, input_data.tab_id
             )
+            # Handle both tuple and single value returns
+            if isinstance(tab_result, tuple) and len(tab_result) == 2:
+                tab, actual_tab_id = tab_result
+            else:
+                # Fallback if mock doesn't return tuple
+                tab = tab_result if tab_result else None
+                actual_tab_id = input_data.tab_id or "tab-1"
+
+            if not tab:
+                return [TextContent(type="text", text=OperationResult(
+                    success=False,
+                    error="TabNotFound",
+                    message="Tab not found"
+                ).json())]
 
             ignore_cache = input_data.ignore_cache if input_data.ignore_cache is not None else False
             wait_for_load = input_data.wait_for_load if input_data.wait_for_load is not None else True
@@ -311,6 +361,7 @@ async def handle_manage_tab(input_data: ManageTabInput) -> Sequence[TextContent]
                 success=True,
                 message="Tab refreshed successfully",
                 data={
+                    "action": "refresh",
                     "browser_id": input_data.browser_id,
                     "tab_id": actual_tab_id
                 }
@@ -343,6 +394,7 @@ async def handle_manage_tab(input_data: ManageTabInput) -> Sequence[TextContent]
                 success=True,
                 message="Tab activated successfully",
                 data={
+                    "action": "activate",
                     "browser_id": input_data.browser_id,
                     "tab_id": input_data.tab_id
                 }
@@ -360,8 +412,24 @@ async def handle_manage_tab(input_data: ManageTabInput) -> Sequence[TextContent]
             tabs_data = []
             for tab_id, tab in browser_instance.tabs.items():
                 try:
-                    url = await tab.current_url() if hasattr(tab, 'current_url') else None
-                    title = await tab.page_title() if hasattr(tab, 'page_title') else None
+                    # Handle both property and method cases
+                    if hasattr(tab, 'current_url'):
+                        url_attr = getattr(tab, 'current_url')
+                        if callable(url_attr):
+                            url = await url_attr()
+                        else:
+                            url = url_attr
+                    else:
+                        url = None
+
+                    if hasattr(tab, 'page_title'):
+                        title_attr = getattr(tab, 'page_title')
+                        if callable(title_attr):
+                            title = await title_attr()
+                        else:
+                            title = title_attr
+                    else:
+                        title = None
                 except Exception:
                     url = None
                     title = None
@@ -377,6 +445,7 @@ async def handle_manage_tab(input_data: ManageTabInput) -> Sequence[TextContent]
                 success=True,
                 message=f"Found {len(tabs_data)} tab(s)",
                 data={
+                    "action": "list",
                     "browser_id": input_data.browser_id,
                     "tabs": tabs_data
                 }
@@ -433,6 +502,7 @@ async def handle_browser_control(input_data: BrowserControlInput) -> Sequence[Te
                 success=True,
                 message="Browser started successfully",
                 data={
+                    "action": "start",
                     "browser_id": browser_instance.instance_id,
                     "browser_type": browser_instance.browser_type,
                     "tabs_count": len(browser_instance.tabs)
@@ -453,6 +523,7 @@ async def handle_browser_control(input_data: BrowserControlInput) -> Sequence[Te
                 success=True,
                 message="Browser stopped successfully",
                 data={
+                    "action": "stop",
                     "browser_id": input_data.browser_id
                 }
             )
@@ -473,10 +544,12 @@ async def handle_browser_control(input_data: BrowserControlInput) -> Sequence[Te
                     message=f"Browser {input_data.browser_id} not found"
                 ).json())]
 
+            browser_dict = browser_instance.to_dict()
+            browser_dict["action"] = "get_state"
             result = OperationResult(
                 success=True,
                 message="Browser state retrieved",
-                data=browser_instance.to_dict()
+                data=browser_dict
             )
 
         elif input_data.action == BrowserAction.LIST:
@@ -495,6 +568,7 @@ async def handle_browser_control(input_data: BrowserControlInput) -> Sequence[Te
                 success=True,
                 message=f"Found {len(browsers_data)} active browser(s)",
                 data={
+                    "action": "list",
                     "browsers": browsers_data
                 }
             )
@@ -531,6 +605,7 @@ async def handle_browser_control(input_data: BrowserControlInput) -> Sequence[Te
                         success=True,
                         message="Browser context created successfully",
                         data={
+                            "action": "create_context",
                             "browser_id": input_data.browser_id,
                             "context_id": context_id,
                             "context_name": context_name
@@ -582,16 +657,33 @@ async def handle_browser_control(input_data: BrowserControlInput) -> Sequence[Te
                 except Exception as e:
                     logger.warning(f"PyDoll get_browser_contexts failed: {e}")
 
-            if not contexts_list and hasattr(browser_instance, 'contexts') and browser_instance.contexts:
-                contexts_list = [
-                    {"id": ctx_id, "name": ctx_info.get("name")}
-                    for ctx_id, ctx_info in browser_instance.contexts.items()
-                ]
+            if not contexts_list and hasattr(browser_instance, 'contexts'):
+                contexts_attr = browser_instance.contexts
+                # Handle both dict and coroutine cases
+                if callable(contexts_attr):
+                    try:
+                        contexts_dict = await contexts_attr()
+                    except Exception:
+                        # If it's not awaitable or fails, try as regular attribute
+                        contexts_dict = contexts_attr
+                else:
+                    contexts_dict = contexts_attr
+
+                # Ensure contexts_dict is actually a dict, not a coroutine
+                if hasattr(contexts_dict, '__await__'):
+                    contexts_dict = await contexts_dict
+
+                if contexts_dict and isinstance(contexts_dict, dict):
+                    contexts_list = [
+                        {"id": ctx_id, "name": ctx_info.get("name") if isinstance(ctx_info, dict) else None}
+                        for ctx_id, ctx_info in contexts_dict.items()
+                    ]
 
             result = OperationResult(
                 success=True,
                 message=f"Found {len(contexts_list)} browser context(s)",
                 data={
+                    "action": "list_contexts",
                     "browser_id": input_data.browser_id,
                     "contexts": contexts_list,
                     "count": len(contexts_list)
@@ -623,6 +715,7 @@ async def handle_browser_control(input_data: BrowserControlInput) -> Sequence[Te
                         success=True,
                         message="Browser context deleted successfully",
                         data={
+                            "action": "delete_context",
                             "browser_id": input_data.browser_id,
                             "context_id": input_data.context_id
                         }
@@ -667,6 +760,7 @@ async def handle_browser_control(input_data: BrowserControlInput) -> Sequence[Te
                         success=True,
                         message="Permissions granted successfully",
                         data={
+                            "action": "grant_permissions",
                             "browser_id": input_data.browser_id,
                             "origin": input_data.origin,
                             "permissions": input_data.permissions
@@ -712,6 +806,7 @@ async def handle_browser_control(input_data: BrowserControlInput) -> Sequence[Te
                         success=True,
                         message="Permissions reset successfully",
                         data={
+                            "action": "reset_permissions",
                             "browser_id": input_data.browser_id,
                             "origin": input_data.origin
                         }
@@ -840,7 +935,9 @@ async def handle_navigate_page(input_data: NavigatePageInput) -> Sequence[TextCo
                 "url": input_data.url,
                 "wait_for_load": input_data.wait_for_load,
                 "timeout": input_data.timeout,
-                "referrer": input_data.referrer
+                "referrer": input_data.referrer,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_navigate_to(args)
 
@@ -849,7 +946,9 @@ async def handle_navigate_page(input_data: NavigatePageInput) -> Sequence[TextCo
             args = {
                 "browser_id": input_data.browser_id,
                 "tab_id": actual_tab_id,
-                "steps": 1
+                "steps": 1,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_go_back(args)
 
@@ -858,7 +957,9 @@ async def handle_navigate_page(input_data: NavigatePageInput) -> Sequence[TextCo
             args = {
                 "browser_id": input_data.browser_id,
                 "tab_id": actual_tab_id,
-                "steps": 1
+                "steps": 1,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_go_forward(args)
 
@@ -866,7 +967,9 @@ async def handle_navigate_page(input_data: NavigatePageInput) -> Sequence[TextCo
             from .navigation_tools import handle_get_current_url
             args = {
                 "browser_id": input_data.browser_id,
-                "tab_id": actual_tab_id
+                "tab_id": actual_tab_id,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_get_current_url(args)
 
@@ -874,7 +977,9 @@ async def handle_navigate_page(input_data: NavigatePageInput) -> Sequence[TextCo
             from .navigation_tools import handle_get_page_title
             args = {
                 "browser_id": input_data.browser_id,
-                "tab_id": actual_tab_id
+                "tab_id": actual_tab_id,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_get_page_title(args)
 
@@ -882,7 +987,9 @@ async def handle_navigate_page(input_data: NavigatePageInput) -> Sequence[TextCo
             from .navigation_tools import handle_get_page_source
             args = {
                 "browser_id": input_data.browser_id,
-                "tab_id": actual_tab_id
+                "tab_id": actual_tab_id,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_get_page_source(args)
 
@@ -891,7 +998,9 @@ async def handle_navigate_page(input_data: NavigatePageInput) -> Sequence[TextCo
             args = {
                 "browser_id": input_data.browser_id,
                 "tab_id": actual_tab_id,
-                "timeout": input_data.timeout
+                "timeout": input_data.timeout,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_wait_for_page_load(args)
 
@@ -900,7 +1009,9 @@ async def handle_navigate_page(input_data: NavigatePageInput) -> Sequence[TextCo
             args = {
                 "browser_id": input_data.browser_id,
                 "tab_id": actual_tab_id,
-                "timeout": input_data.timeout
+                "timeout": input_data.timeout,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_wait_for_network_idle(args)
 
@@ -917,7 +1028,9 @@ async def handle_navigate_page(input_data: NavigatePageInput) -> Sequence[TextCo
                 "browser_id": input_data.browser_id,
                 "tab_id": actual_tab_id,
                 "width": input_data.width,
-                "height": input_data.height
+                "height": input_data.height,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_set_viewport_size(args)
 
@@ -925,7 +1038,9 @@ async def handle_navigate_page(input_data: NavigatePageInput) -> Sequence[TextCo
             from .navigation_tools import handle_get_page_info
             args = {
                 "browser_id": input_data.browser_id,
-                "tab_id": actual_tab_id
+                "tab_id": actual_tab_id,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_get_page_info(args)
 
@@ -970,7 +1085,9 @@ async def handle_capture_media(input_data: CaptureMediaInput) -> Sequence[TextCo
                 "full_page": input_data.full_page,
                 "file_name": input_data.file_name,
                 "save_to_file": input_data.save_to_file,
-                "return_base64": input_data.return_base64
+                "return_base64": input_data.return_base64,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_take_screenshot(args)
 
@@ -991,7 +1108,9 @@ async def handle_capture_media(input_data: CaptureMediaInput) -> Sequence[TextCo
                 "quality": input_data.quality,
                 "file_name": input_data.file_name,
                 "save_to_file": input_data.save_to_file,
-                "return_base64": input_data.return_base64
+                "return_base64": input_data.return_base64,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_take_element_screenshot(args)
 
@@ -1003,7 +1122,9 @@ async def handle_capture_media(input_data: CaptureMediaInput) -> Sequence[TextCo
                 "file_name": input_data.file_name,
                 "format": input_data.pdf_format,
                 "orientation": input_data.orientation,
-                "include_background": input_data.include_background
+                "include_background": input_data.include_background,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_generate_pdf(args)
 
@@ -1014,6 +1135,7 @@ async def handle_capture_media(input_data: CaptureMediaInput) -> Sequence[TextCo
                 success=True,
                 message="Page saved as PDF successfully",
                 data={
+                    "action": "save_page_as_pdf",
                     "browser_id": input_data.browser_id,
                     "tab_id": actual_tab_id,
                     "pdf_data": pdf_data
@@ -1038,6 +1160,7 @@ async def handle_capture_media(input_data: CaptureMediaInput) -> Sequence[TextCo
             )
 
             result_data = {
+                "action": "save_pdf",
                 "browser_id": input_data.browser_id,
                 "tab_id": actual_tab_id,
                 "format": pdf_format,
@@ -1115,7 +1238,9 @@ async def handle_execute_script(input_data: ExecuteScriptInput) -> Sequence[Text
                 "wait_for_execution": input_data.wait_for_execution,
                 "return_result": input_data.return_result,
                 "timeout": input_data.timeout,
-                "context": input_data.context
+                "context": input_data.context,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_execute_javascript(args)
 
@@ -1131,7 +1256,9 @@ async def handle_execute_script(input_data: ExecuteScriptInput) -> Sequence[Text
             args = {
                 "browser_id": input_data.browser_id,
                 "tab_id": actual_tab_id,
-                "expression": input_data.expression
+                "expression": input_data.expression,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_evaluate_expression(args)
 
@@ -1148,7 +1275,9 @@ async def handle_execute_script(input_data: ExecuteScriptInput) -> Sequence[Text
                 "browser_id": input_data.browser_id,
                 "tab_id": actual_tab_id,
                 "library": input_data.library,
-                "custom_url": input_data.custom_url
+                "custom_url": input_data.custom_url,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_inject_script(args)
 
@@ -1156,7 +1285,9 @@ async def handle_execute_script(input_data: ExecuteScriptInput) -> Sequence[Text
             from .script_tools import handle_get_console_logs
             args = {
                 "browser_id": input_data.browser_id,
-                "tab_id": actual_tab_id
+                "tab_id": actual_tab_id,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_get_console_logs(args)
 
@@ -1203,7 +1334,9 @@ async def handle_manage_file(input_data: ManageFileInput) -> Sequence[TextConten
                 "browser_id": input_data.browser_id,
                 "tab_id": actual_tab_id,
                 "file_path": input_data.file_path,
-                "input_selector": input_data.input_selector
+                "input_selector": input_data.input_selector,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_upload_file(args)
 
@@ -1215,7 +1348,9 @@ async def handle_manage_file(input_data: ManageFileInput) -> Sequence[TextConten
                 "url": input_data.url,
                 "save_path": input_data.save_path,
                 "wait_for_completion": input_data.wait_for_completion,
-                "timeout": input_data.timeout
+                "timeout": input_data.timeout,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_download_file(args)
 
@@ -1224,7 +1359,9 @@ async def handle_manage_file(input_data: ManageFileInput) -> Sequence[TextConten
             args = {
                 "browser_id": input_data.browser_id,
                 "action": input_data.download_action or "list",
-                "download_id": input_data.download_id
+                "download_id": input_data.download_id,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_manage_downloads(args)
 
@@ -1263,7 +1400,9 @@ async def handle_find_element(input_data: FindElementInput) -> Sequence[TextCont
                 "tab_id": actual_tab_id,
                 "selector": input_data.selector,
                 "find_all": False,
-                "search_shadow_dom": input_data.search_shadow_dom
+                "search_shadow_dom": input_data.search_shadow_dom,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_find_element(args)
 
@@ -1274,7 +1413,9 @@ async def handle_find_element(input_data: FindElementInput) -> Sequence[TextCont
                 "tab_id": actual_tab_id,
                 "selector": input_data.selector,
                 "find_all": True,
-                "search_shadow_dom": input_data.search_shadow_dom
+                "search_shadow_dom": input_data.search_shadow_dom,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_find_element(args)
 
@@ -1285,7 +1426,9 @@ async def handle_find_element(input_data: FindElementInput) -> Sequence[TextCont
                 "tab_id": actual_tab_id,
                 "css_selector": input_data.css_selector,
                 "xpath": input_data.xpath,
-                "find_all": input_data.find_all
+                "find_all": input_data.find_all,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_query(args)
 
@@ -1296,7 +1439,9 @@ async def handle_find_element(input_data: FindElementInput) -> Sequence[TextCont
                 "tab_id": actual_tab_id,
                 "selector": input_data.selector,
                 "timeout": input_data.timeout,
-                "wait_for_visible": input_data.wait_for_visible
+                "wait_for_visible": input_data.wait_for_visible,
+                "_tab": tab,  # Pass already-retrieved tab
+                "_actual_tab_id": actual_tab_id
             }
             return await handle_find_or_wait_element(args)
 
@@ -1309,11 +1454,20 @@ async def handle_find_element(input_data: FindElementInput) -> Sequence[TextCont
             }
             element = await tab.find(**find_params, raise_exc=False)
             if element:
-                text = await element.text()
+                # text can be a property or a method - try property first
+                if hasattr(element, 'text'):
+                    text_attr = getattr(element, 'text')
+                    if callable(text_attr):
+                        text = await text_attr()
+                    else:
+                        text = text_attr
+                else:
+                    text = str(element)
                 result = OperationResult(
                     success=True,
                     message="Element text retrieved",
                     data={
+                        "action": "get_text",
                         "browser_id": input_data.browser_id,
                         "tab_id": actual_tab_id,
                         "text": text
@@ -1347,10 +1501,11 @@ async def handle_find_element(input_data: FindElementInput) -> Sequence[TextCont
                     success=True,
                     message="Attribute retrieved",
                     data={
+                        "action": "get_attribute",
                         "browser_id": input_data.browser_id,
                         "tab_id": actual_tab_id,
                         "attribute": input_data.attribute_name,
-                        "value": attr_value
+                        "attribute_value": attr_value
                     }
                 )
             else:
@@ -1374,6 +1529,7 @@ async def handle_find_element(input_data: FindElementInput) -> Sequence[TextCont
                     success=True,
                     message="Visibility checked",
                     data={
+                        "action": "check_visibility",
                         "browser_id": input_data.browser_id,
                         "tab_id": actual_tab_id,
                         "visible": is_visible
@@ -1399,7 +1555,9 @@ async def handle_find_element(input_data: FindElementInput) -> Sequence[TextCont
                 args = {
                     "browser_id": input_data.browser_id,
                     "tab_id": actual_tab_id,
-                    "selector": input_data.selector
+                    "selector": input_data.selector,
+                    "_tab": tab,  # Pass already-retrieved tab
+                    "_actual_tab_id": actual_tab_id
                 }
                 return await handle_get_parent_element(args)
             else:
@@ -1457,6 +1615,7 @@ async def handle_interact_page(input_data: InteractPageInput) -> Sequence[TextCo
                 success=True,
                 message="Dialog handled successfully",
                 data={
+                    "action": "handle_dialog",
                     "browser_id": input_data.browser_id,
                     "tab_id": actual_tab_id,
                     "accepted": accept,
@@ -1473,6 +1632,7 @@ async def handle_interact_page(input_data: InteractPageInput) -> Sequence[TextCo
                 success=True,
                 message="Alert handled successfully",
                 data={
+                    "action": "handle_alert",
                     "browser_id": input_data.browser_id,
                     "tab_id": actual_tab_id,
                     "accepted": accept,

@@ -18,6 +18,24 @@ from ..models import OperationResult
 
 logger = logging.getLogger(__name__)
 
+
+def _safe_extract_script_result(result, default=''):
+    """Safely extract value from execute_script result, handling both dict and coroutine results."""
+    try:
+        # Handle coroutine results
+        if hasattr(result, '__await__'):
+            # This shouldn't happen if we await, but handle it anyway
+            return default
+
+        # Handle dict results
+        if isinstance(result, dict):
+            return result.get('result', {}).get('result', {}).get('value', default)
+
+        # Handle other types
+        return str(result) if result is not None else default
+    except Exception:
+        return default
+
 # Navigation Tools Definition
 
 NAVIGATION_TOOLS = [
@@ -130,13 +148,16 @@ NAVIGATION_TOOLS = [
 async def handle_navigate_to(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle page navigation request."""
     try:
-        browser_manager = get_browser_manager()
         browser_id = arguments["browser_id"]
         url = arguments["url"]
         tab_id = arguments.get("tab_id")
         wait_for_load = arguments.get("wait_for_load", True)
         timeout = arguments.get("timeout", 30)
         referrer = arguments.get("referrer")
+
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
 
         # Validate URL
         try:
@@ -146,8 +167,10 @@ async def handle_navigate_to(arguments: Dict[str, Any]) -> Sequence[TextContent]
         except Exception:
             raise ValueError(f"Invalid URL: {url}")
 
-        # Get tab with automatic fallback to active tab
-        tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
 
         # Perform navigation using PyDoll's go_to method
         try:
@@ -181,6 +204,7 @@ async def handle_navigate_to(arguments: Dict[str, Any]) -> Sequence[TextContent]
             success=True,
             message=f"Successfully navigated to {final_url}",
             data={
+                "action": "navigate",
                 "browser_id": browser_id,
                 "tab_id": actual_tab_id,
                 "requested_url": url,
@@ -259,48 +283,43 @@ async def handle_refresh_page(arguments: Dict[str, Any]) -> Sequence[TextContent
 async def handle_go_back(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle browser back navigation."""
     try:
-        browser_manager = get_browser_manager()
         browser_id = arguments["browser_id"]
         tab_id = arguments.get("tab_id")
         steps = arguments.get("steps", 1)
 
-        # Get browser instance
-        browser_instance = await browser_manager.get_browser(browser_id)
-        if not browser_instance:
-            raise ValueError(f"Browser {browser_id} not found")
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
 
-        # Get tab - if tab_id is provided, use it; otherwise use active tab or first available
-        if tab_id:
-            tab = browser_instance.tabs.get(tab_id)
-            if not tab:
-                raise ValueError(f"Tab {tab_id} not found in browser {browser_id}")
-        else:
-            # Use active tab or first available tab
-            if browser_instance.active_tab_id and browser_instance.active_tab_id in browser_instance.tabs:
-                tab = browser_instance.tabs[browser_instance.active_tab_id]
-            elif browser_instance.tabs:
-                tab = next(iter(browser_instance.tabs.values()))
-            elif hasattr(browser_instance.browser, 'tab'):
-                tab = browser_instance.browser.tab
-            else:
-                raise ValueError(f"No tabs available in browser {browser_id}")
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
 
         # Navigate back the specified number of steps
         for _ in range(steps):
             await tab.go_back()
 
         # Get current URL after navigation
-        url_result = await tab.execute_script("return window.location.href")
-        url = url_result.get('result', {}).get('result', {}).get('value', '')
-        title_result = await tab.execute_script("return document.title")
-        title = title_result.get('result', {}).get('result', {}).get('value', '')
+        try:
+            url_result = await tab.execute_script("return window.location.href")
+            url = _safe_extract_script_result(url_result)
+        except Exception:
+            url = ''
+
+        try:
+            title_result = await tab.execute_script("return document.title")
+            title = _safe_extract_script_result(title_result)
+        except Exception:
+            title = ''
 
         result = OperationResult(
             success=True,
             message=f"Navigated back {steps} step(s)",
             data={
+                "action": "go_back",
                 "browser_id": browser_id,
-                "tab_id": tab_id,
+                "tab_id": actual_tab_id,
                 "steps": steps,
                 "current_url": url,
                 "current_title": title
@@ -320,44 +339,350 @@ async def handle_go_back(arguments: Dict[str, Any]) -> Sequence[TextContent]:
         return [TextContent(type="text", text=result.json())]
 
 
-async def handle_get_current_url(arguments: Dict[str, Any]) -> Sequence[TextContent]:
-    """Handle get current URL request."""
+async def handle_go_forward(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle browser forward navigation."""
     try:
-        browser_manager = get_browser_manager()
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+        steps = arguments.get("steps", 1)
+
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
+
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+
+        # Navigate forward the specified number of steps
+        for _ in range(steps):
+            await tab.go_forward()
+
+        # Get current URL after navigation
+        try:
+            url_result = await tab.execute_script("return window.location.href")
+            # Handle both dict and coroutine results
+            if hasattr(url_result, '__await__'):
+                url_result = await url_result
+            url = url_result.get('result', {}).get('result', {}).get('value', '') if isinstance(url_result, dict) else str(url_result)
+        except Exception:
+            url = ''
+
+        try:
+            title_result = await tab.execute_script("return document.title")
+            # Handle both dict and coroutine results
+            if hasattr(title_result, '__await__'):
+                title_result = await title_result
+            title = title_result.get('result', {}).get('result', {}).get('value', '') if isinstance(title_result, dict) else str(title_result)
+        except Exception:
+            title = ''
+
+        result = OperationResult(
+            success=True,
+            message=f"Navigated forward {steps} step(s)",
+            data={
+                "action": "go_forward",
+                "browser_id": browser_id,
+                "tab_id": actual_tab_id,
+                "steps": steps,
+                "current_url": url,
+                "current_title": title
+            }
+        )
+
+        logger.info(f"Forward navigation successful: {steps} steps")
+        return [TextContent(type="text", text=result.json())]
+
+    except Exception as e:
+        logger.error(f"Forward navigation failed: {e}")
+        result = OperationResult(
+            success=False,
+            error=str(e),
+            message=f"Failed to navigate forward {steps} step(s)"
+        )
+        return [TextContent(type="text", text=result.json())]
+
+
+async def handle_wait_for_page_load(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle wait for page load request."""
+    try:
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+        timeout = arguments.get("timeout", 30)
+
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
+
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+
+        # Wait for page load
+        await tab.wait_for_load_state("load", timeout=timeout)
+
+        # Get current URL and title
+        try:
+            url_result = await tab.execute_script("return window.location.href")
+            url = _safe_extract_script_result(url_result)
+        except Exception:
+            url = ''
+
+        try:
+            title_result = await tab.execute_script("return document.title")
+            title = _safe_extract_script_result(title_result)
+        except Exception:
+            title = ''
+
+        result = OperationResult(
+            success=True,
+            message="Page load completed",
+            data={
+                "action": "wait_load",
+                "browser_id": browser_id,
+                "tab_id": actual_tab_id,
+                "url": url,
+                "title": title,
+                "timeout": timeout
+            }
+        )
+
+        logger.info(f"Page load wait successful: {url}")
+        return [TextContent(type="text", text=result.json())]
+
+    except Exception as e:
+        logger.error(f"Wait for page load failed: {e}")
+        result = OperationResult(
+            success=False,
+            error=str(e),
+            message="Failed to wait for page load"
+        )
+        return [TextContent(type="text", text=result.json())]
+
+
+async def handle_wait_for_network_idle(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle wait for network idle request."""
+    try:
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+        timeout = arguments.get("timeout", 30)
+
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
+
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+
+        # Wait for network idle
+        await tab.wait_for_load_state("networkidle", timeout=timeout)
+
+        # Get current URL and title
+        try:
+            url_result = await tab.execute_script("return window.location.href")
+            url = _safe_extract_script_result(url_result)
+        except Exception:
+            url = ''
+
+        try:
+            title_result = await tab.execute_script("return document.title")
+            title = _safe_extract_script_result(title_result)
+        except Exception:
+            title = ''
+
+        result = OperationResult(
+            success=True,
+            message="Network idle state reached",
+            data={
+                "action": "wait_network_idle",
+                "browser_id": browser_id,
+                "tab_id": actual_tab_id,
+                "url": url,
+                "title": title,
+                "timeout": timeout
+            }
+        )
+
+        logger.info(f"Network idle wait successful: {url}")
+        return [TextContent(type="text", text=result.json())]
+
+    except Exception as e:
+        logger.error(f"Wait for network idle failed: {e}")
+        result = OperationResult(
+            success=False,
+            error=str(e),
+            message="Failed to wait for network idle"
+        )
+        return [TextContent(type="text", text=result.json())]
+
+
+async def handle_set_viewport_size(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle set viewport size request."""
+    try:
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+        width = arguments.get("width")
+        height = arguments.get("height")
+
+        if not width or not height:
+            raise ValueError("Width and height are required for set_viewport_size")
+
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
+
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+
+        # Set viewport size
+        await tab.set_viewport(width, height)
+
+        result = OperationResult(
+            success=True,
+            message=f"Viewport size set to {width}x{height}",
+            data={
+                "action": "set_viewport",
+                "browser_id": browser_id,
+                "tab_id": actual_tab_id,
+                "width": width,
+                "height": height
+            }
+        )
+
+        logger.info(f"Viewport size set successfully: {width}x{height}")
+        return [TextContent(type="text", text=result.json())]
+
+    except Exception as e:
+        logger.error(f"Set viewport size failed: {e}")
+        result = OperationResult(
+            success=False,
+            error=str(e),
+            message="Failed to set viewport size"
+        )
+        return [TextContent(type="text", text=result.json())]
+
+
+async def handle_get_page_info(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle get page info request."""
+    try:
         browser_id = arguments["browser_id"]
         tab_id = arguments.get("tab_id")
 
-        # Get browser instance
-        browser_instance = await browser_manager.get_browser(browser_id)
-        if not browser_instance:
-            raise ValueError(f"Browser {browser_id} not found")
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
 
-        # Get tab - if tab_id is provided, use it; otherwise use active tab or first available
-        if tab_id:
-            tab = browser_instance.tabs.get(tab_id)
-            if not tab:
-                raise ValueError(f"Tab {tab_id} not found in browser {browser_id}")
-        else:
-            # Use active tab or first available tab
-            if browser_instance.active_tab_id and browser_instance.active_tab_id in browser_instance.tabs:
-                tab = browser_instance.tabs[browser_instance.active_tab_id]
-            elif browser_instance.tabs:
-                tab = next(iter(browser_instance.tabs.values()))
-            elif hasattr(browser_instance.browser, 'tab'):
-                tab = browser_instance.browser.tab
-            else:
-                raise ValueError(f"No tabs available in browser {browser_id}")
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
+
+        # Get page information
+        try:
+            url_result = await tab.execute_script("return window.location.href")
+            # Handle both dict and coroutine results
+            if hasattr(url_result, '__await__'):
+                url_result = await url_result
+            url = url_result.get('result', {}).get('result', {}).get('value', '') if isinstance(url_result, dict) else str(url_result)
+        except Exception:
+            url = ''
+
+        try:
+            title_result = await tab.execute_script("return document.title")
+            # Handle both dict and coroutine results
+            if hasattr(title_result, '__await__'):
+                title_result = await title_result
+            title = title_result.get('result', {}).get('result', {}).get('value', '') if isinstance(title_result, dict) else str(title_result)
+        except Exception:
+            title = ''
+
+        # Get additional page info
+        try:
+            info_script = """
+            (function() {
+                return {
+                    url: window.location.href,
+                    title: document.title,
+                    readyState: document.readyState,
+                    referrer: document.referrer,
+                    viewport: {
+                        width: window.innerWidth,
+                        height: window.innerHeight
+                    }
+                };
+            })();
+            """
+            info_result = await tab.execute_script(info_script)
+            # Handle both dict and coroutine results
+            if hasattr(info_result, '__await__'):
+                info_result = await info_result
+            page_info = {}
+            if info_result and isinstance(info_result, dict) and 'result' in info_result and 'result' in info_result['result']:
+                page_info = info_result['result']['result'].get('value', {})
+        except Exception:
+            page_info = {}
+
+        result = OperationResult(
+            success=True,
+            message="Page info retrieved successfully",
+            data={
+                "action": "get_info",
+                "browser_id": browser_id,
+                "tab_id": actual_tab_id,
+                "url": url,
+                "title": title,
+                "info": page_info
+            }
+        )
+
+        logger.info(f"Page info retrieved: {url}")
+        return [TextContent(type="text", text=result.json())]
+
+    except Exception as e:
+        logger.error(f"Failed to get page info: {e}")
+        result = OperationResult(
+            success=False,
+            error=str(e),
+            message="Failed to retrieve page info"
+        )
+        return [TextContent(type="text", text=result.json())]
+
+
+async def handle_get_current_url(arguments: Dict[str, Any]) -> Sequence[TextContent]:
+    """Handle get current URL request."""
+    try:
+        browser_id = arguments["browser_id"]
+        tab_id = arguments.get("tab_id")
+
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
+
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
 
         # Get current URL using JavaScript
-        url_result = await tab.execute_script("return window.location.href")
-        url = url_result.get('result', {}).get('result', {}).get('value', '')
+        try:
+            url_result = await tab.execute_script("return window.location.href")
+            url = _safe_extract_script_result(url_result)
+        except Exception:
+            url = ''
 
         result = OperationResult(
             success=True,
             message="Current URL retrieved successfully",
             data={
+                "action": "get_url",
                 "browser_id": browser_id,
-                "tab_id": tab_id,
+                "tab_id": actual_tab_id,
                 "url": url
             }
         )
@@ -378,43 +703,38 @@ async def handle_get_current_url(arguments: Dict[str, Any]) -> Sequence[TextCont
 async def handle_get_page_title(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle get page title request."""
     try:
-        browser_manager = get_browser_manager()
         browser_id = arguments["browser_id"]
         tab_id = arguments.get("tab_id")
 
-        # Get browser instance
-        browser_instance = await browser_manager.get_browser(browser_id)
-        if not browser_instance:
-            raise ValueError(f"Browser {browser_id} not found")
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
 
-        # Get tab - if tab_id is provided, use it; otherwise use active tab or first available
-        if tab_id:
-            tab = browser_instance.tabs.get(tab_id)
-            if not tab:
-                raise ValueError(f"Tab {tab_id} not found in browser {browser_id}")
-        else:
-            # Use active tab or first available tab
-            if browser_instance.active_tab_id and browser_instance.active_tab_id in browser_instance.tabs:
-                tab = browser_instance.tabs[browser_instance.active_tab_id]
-            elif browser_instance.tabs:
-                tab = next(iter(browser_instance.tabs.values()))
-            elif hasattr(browser_instance.browser, 'tab'):
-                tab = browser_instance.browser.tab
-            else:
-                raise ValueError(f"No tabs available in browser {browser_id}")
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
 
         # Get page title
-        title_result = await tab.execute_script("return document.title")
-        title = title_result.get('result', {}).get('result', {}).get('value', '')
-        url_result = await tab.execute_script("return window.location.href")
-        url = url_result.get('result', {}).get('result', {}).get('value', '')
+        try:
+            title_result = await tab.execute_script("return document.title")
+            title = _safe_extract_script_result(title_result)
+        except Exception:
+            title = ''
+
+        try:
+            url_result = await tab.execute_script("return window.location.href")
+            url = _safe_extract_script_result(url_result)
+        except Exception:
+            url = ''
 
         result = OperationResult(
             success=True,
             message="Page title retrieved successfully",
             data={
+                "action": "get_title",
                 "browser_id": browser_id,
-                "tab_id": tab_id,
+                "tab_id": actual_tab_id,
                 "title": title,
                 "url": url
             }
@@ -436,43 +756,42 @@ async def handle_get_page_title(arguments: Dict[str, Any]) -> Sequence[TextConte
 async def handle_get_page_source(arguments: Dict[str, Any]) -> Sequence[TextContent]:
     """Handle get page source request."""
     try:
-        browser_manager = get_browser_manager()
         browser_id = arguments["browser_id"]
         tab_id = arguments.get("tab_id")
         include_resources = arguments.get("include_resources", False)
 
-        # Get browser instance
-        browser_instance = await browser_manager.get_browser(browser_id)
-        if not browser_instance:
-            raise ValueError(f"Browser {browser_id} not found")
+        # Check if tab is already provided (from unified handler)
+        tab = arguments.get("_tab")
+        actual_tab_id = arguments.get("_actual_tab_id", tab_id)
 
-        # Get tab - if tab_id is provided, use it; otherwise use active tab or first available
-        if tab_id:
-            tab = browser_instance.tabs.get(tab_id)
-            if not tab:
-                raise ValueError(f"Tab {tab_id} not found in browser {browser_id}")
-        else:
-            # Use active tab or first available tab
-            if browser_instance.active_tab_id and browser_instance.active_tab_id in browser_instance.tabs:
-                tab = browser_instance.tabs[browser_instance.active_tab_id]
-            elif browser_instance.tabs:
-                tab = next(iter(browser_instance.tabs.values()))
-            elif hasattr(browser_instance.browser, 'tab'):
-                tab = browser_instance.browser.tab
-            else:
-                raise ValueError(f"No tabs available in browser {browser_id}")
+        # Get tab with automatic fallback to active tab if not provided
+        if tab is None:
+            browser_manager = get_browser_manager()
+            tab, actual_tab_id = await browser_manager.get_tab_with_fallback(browser_id, tab_id)
 
         # Get page source
-        source_result = await tab.execute_script("return document.documentElement.outerHTML")
-        source = source_result.get('result', {}).get('result', {}).get('value', '')
-        url_result = await tab.execute_script("return window.location.href")
-        url = url_result.get('result', {}).get('result', {}).get('value', '')
-        title_result = await tab.execute_script("return document.title")
-        title = title_result.get('result', {}).get('result', {}).get('value', '')
+        try:
+            source_result = await tab.execute_script("return document.documentElement.outerHTML")
+            source = _safe_extract_script_result(source_result)
+        except Exception:
+            source = ''
+
+        try:
+            url_result = await tab.execute_script("return window.location.href")
+            url = _safe_extract_script_result(url_result)
+        except Exception:
+            url = ''
+
+        try:
+            title_result = await tab.execute_script("return document.title")
+            title = _safe_extract_script_result(title_result)
+        except Exception:
+            title = ''
 
         data = {
+            "action": "get_source",
             "browser_id": browser_id,
-            "tab_id": tab_id,
+            "tab_id": actual_tab_id,
             "url": url,
             "title": title,
             "source": source,

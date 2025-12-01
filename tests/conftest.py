@@ -306,30 +306,77 @@ def _is_browser_available() -> bool:
     """Check if a browser is available for testing."""
     try:
         import subprocess
+        import platform
+        import os
 
-        # Check for Chrome
-        try:
-            subprocess.run(
-                ["google-chrome", "--version"],
-                capture_output=True,
-                check=True,
-                timeout=5
-            )
-            return True
-        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-            pass
+        system = platform.system().lower()
 
-        # Check for Chromium
-        try:
-            subprocess.run(
-                ["chromium-browser", "--version"],
-                capture_output=True,
-                check=True,
-                timeout=5
-            )
-            return True
-        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-            pass
+        # Windows browser detection
+        if system == "windows":
+            # Check common Chrome installation paths
+            chrome_paths = [
+                r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+                r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+                os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe"),
+            ]
+
+            for chrome_path in chrome_paths:
+                if os.path.exists(chrome_path):
+                    # File exists, browser is available
+                    # On Windows, running --version can timeout, so just check existence
+                    return True
+
+            # Check for Edge
+            edge_paths = [
+                r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+                r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+            ]
+
+            for edge_path in edge_paths:
+                if os.path.exists(edge_path):
+                    # File exists, browser is available
+                    return True
+
+        # Linux/Mac browser detection
+        else:
+            # Check for Chrome
+            try:
+                subprocess.run(
+                    ["google-chrome", "--version"],
+                    capture_output=True,
+                    check=True,
+                    timeout=5
+                )
+                return True
+            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                pass
+
+            # Check for Chromium
+            try:
+                subprocess.run(
+                    ["chromium-browser", "--version"],
+                    capture_output=True,
+                    check=True,
+                    timeout=5
+                )
+                return True
+            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                pass
+
+            # Check for Chrome on Mac
+            if system == "darwin":
+                chrome_path = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+                if os.path.exists(chrome_path):
+                    try:
+                        subprocess.run(
+                            [chrome_path, "--version"],
+                            capture_output=True,
+                            check=True,
+                            timeout=5
+                        )
+                        return True
+                    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                        pass
 
         return False
 
@@ -746,30 +793,77 @@ def _is_browser_available() -> bool:
     """Check if a browser is available for testing."""
     try:
         import subprocess
+        import platform
+        import os
 
-        # Check for Chrome
-        try:
-            subprocess.run(
-                ["google-chrome", "--version"],
-                capture_output=True,
-                check=True,
-                timeout=5
-            )
-            return True
-        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-            pass
+        system = platform.system().lower()
 
-        # Check for Chromium
-        try:
-            subprocess.run(
-                ["chromium-browser", "--version"],
-                capture_output=True,
-                check=True,
-                timeout=5
-            )
-            return True
-        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-            pass
+        # Windows browser detection
+        if system == "windows":
+            # Check common Chrome installation paths
+            chrome_paths = [
+                r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+                r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+                os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe"),
+            ]
+
+            for chrome_path in chrome_paths:
+                if os.path.exists(chrome_path):
+                    # File exists, browser is available
+                    # On Windows, running --version can timeout, so just check existence
+                    return True
+
+            # Check for Edge
+            edge_paths = [
+                r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+                r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+            ]
+
+            for edge_path in edge_paths:
+                if os.path.exists(edge_path):
+                    # File exists, browser is available
+                    return True
+
+        # Linux/Mac browser detection
+        else:
+            # Check for Chrome
+            try:
+                subprocess.run(
+                    ["google-chrome", "--version"],
+                    capture_output=True,
+                    check=True,
+                    timeout=5
+                )
+                return True
+            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                pass
+
+            # Check for Chromium
+            try:
+                subprocess.run(
+                    ["chromium-browser", "--version"],
+                    capture_output=True,
+                    check=True,
+                    timeout=5
+                )
+                return True
+            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                pass
+
+            # Check for Chrome on Mac
+            if system == "darwin":
+                chrome_path = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+                if os.path.exists(chrome_path):
+                    try:
+                        subprocess.run(
+                            [chrome_path, "--version"],
+                            capture_output=True,
+                            check=True,
+                            timeout=5
+                        )
+                        return True
+                    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                        pass
 
         return False
 
