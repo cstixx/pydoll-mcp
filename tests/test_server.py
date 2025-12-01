@@ -3,6 +3,9 @@
 This module contains unit tests for the core functionality of the PyDoll MCP Server.
 """
 
+from pydoll_mcp.core.browser_manager import BrowserManager
+
+
 import asyncio
 import json
 import pytest
@@ -58,7 +61,7 @@ class TestBrowserManager:
     """Test cases for the BrowserManager class."""
 
     @pytest.fixture
-    def browser_manager(self):
+    def browser_manager(self) -> BrowserManager:
         """Create a test browser manager instance."""
         from unittest.mock import AsyncMock
         from pydoll_mcp.core import SessionStore
@@ -74,16 +77,16 @@ class TestBrowserManager:
 
         return BrowserManager(session_store=mock_session_store)
 
-    def test_browser_manager_initialization(self, browser_manager):
+    def test_browser_manager_initialization(self, browser_manager: BrowserManager):
         """Test browser manager initialization."""
         assert len(browser_manager._active_browsers) == 0
         # BrowserManager now uses settings from config
         assert browser_manager.max_browsers is not None
 
     @pytest.mark.asyncio
-    async def test_start_browser(self, browser_manager):
+    async def test_start_browser(self, browser_manager: BrowserManager):
         """Test browser startup."""
-        with patch('pydoll_mcp.browser_manager.Chrome') as mock_chrome:
+        with patch('pydoll_mcp.core.browser_manager.Chrome') as mock_chrome:
             mock_browser = AsyncMock()
             mock_chrome.return_value = mock_browser
 
@@ -98,7 +101,7 @@ class TestBrowserManager:
             mock_chrome.return_value.start.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_stop_browser(self, browser_manager):
+    async def test_stop_browser(self, browser_manager: BrowserManager):
         """Test browser shutdown."""
         # Create a dummy browser object for the BrowserInstance
         dummy_browser = AsyncMock()
@@ -113,21 +116,20 @@ class TestBrowserManager:
         # Add the real BrowserInstance to the manager's browsers dictionary
         browser_manager._active_browsers[browser_id] = instance
 
-        # Patch browser_pool.release and ensure it calls instance.cleanup
-        async def mock_release_side_effect(inst):
-            await inst.cleanup()
-
-        with patch.object(browser_manager.browser_pool, 'release', side_effect=mock_release_side_effect) as mock_pool_release:
+        # Mock browser_pool.release - just verify it's called, don't call cleanup
+        # destroy_browser will call cleanup after pool.release
+        with patch.object(browser_manager.browser_pool, 'release', new_callable=AsyncMock) as mock_pool_release:
             await browser_manager.destroy_browser(browser_id)
 
             mock_pool_release.assert_awaited_once_with(instance)
             assert browser_id not in browser_manager._active_browsers
+            # cleanup is called once by destroy_browser (after pool.release)
             instance.cleanup.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_new_tab(self, browser_manager):
+    async def test_new_tab(self, browser_manager: BrowserManager):
         """Test tab creation within a browser instance."""
-        with patch('pydoll_mcp.browser_manager.Chrome') as mock_chrome:
+        with patch('pydoll_mcp.core.browser_manager.Chrome') as mock_chrome:
             mock_browser_obj = AsyncMock()
             mock_tab_obj = AsyncMock()
             mock_chrome.return_value = mock_browser_obj
