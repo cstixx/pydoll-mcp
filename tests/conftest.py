@@ -21,7 +21,7 @@ from pydoll_mcp.server import PyDollMCPServer
 
 
 # Test Configuration
-TEST_TIMEOUT TEST_TIMEOUT = 30  # seconds
+TEST_TIMEOUT = 30  # seconds
 BROWSER_TEST_TIMEOUT = 30  # seconds
 INTEGRATION_TEST_TIMEOUT = 30  # seconds
 
